@@ -164,7 +164,7 @@ Dokumentasi interaktif API FastAPI dapat dibuka melalui:
 
 ---
 
-## 🔌 Dokumentasi API
+## Dokumentasi API
 
 Bagian ini menjelaskan kontrak request dan contoh respons API untuk fitur utama TypoKu. Contoh berikut merupakan format yang diharapkan dan perlu disesuaikan dengan implementasi backend aktual.
 
@@ -250,7 +250,7 @@ Gunakan `file` atau `text` sesuai metode input yang didukung backend.
 
 ---
 
-## 📌 Catatan Pengembangan
+## Catatan Pengembangan
 
 TypoKu dikembangkan sebagai aplikasi pendukung penulisan akademik. Hasil koreksi, parafrase, dan terjemahan sebaiknya tetap ditinjau oleh pengguna sebelum digunakan dalam dokumen resmi atau publikasi ilmiah.
 
@@ -258,11 +258,9 @@ AI berfungsi sebagai alat bantu, bukan pengganti proses penyuntingan dan verifik
 
 ---
 
-## 👩‍💻 Pengembang
+## Pengembang
 
-**Intan Maharani**
-
-- GitHub: [@intannz](https://github.com/intannz)
+Proyek ini dikembangkan sebagai bagian dari tugas kelompok Digital Enterpreneurship.
 
 ---
 
