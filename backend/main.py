@@ -1,11 +1,14 @@
 import os
 import json
-from fastapi import FastAPI
+import io
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import joblib
 from dotenv import load_dotenv
 from google import genai
+import PyPDF2
+import docx
 
 load_dotenv()
 app = FastAPI()
@@ -44,7 +47,31 @@ def predict(data: TextInput):
     prediction = model.predict([data.text])[0]
     return {"input_text": data.text, "prediction": str(prediction)}
 
-# --- ENDPOINT BARU: CEK TYPO ---
+# --- ENDPOINT BARU: EKSTRAK TEKS DARI DOKUMEN ---
+@app.post("/api/ekstrak-teks")
+async def ekstrak_teks(file: UploadFile = File(...)):
+    try:
+        teks = ""
+        contents = await file.read()
+        
+        if file.filename.lower().endswith(".pdf"):
+            pdf_reader = PyPDF2.PdfReader(io.BytesIO(contents))
+            for page in pdf_reader.pages:
+                extracted = page.extract_text()
+                if extracted:
+                    teks += extracted + "\n"
+        elif file.filename.lower().endswith(".docx"):
+            doc = docx.Document(io.BytesIO(contents))
+            for para in doc.paragraphs:
+                teks += para.text + "\n"
+        else:
+            return {"status": "error", "message": "Format file tidak didukung. Harap unggah PDF atau DOCX."}
+            
+        return {"status": "success", "filename": file.filename, "extracted_text": teks.strip()}
+    except Exception as e:
+        return {"status": "error", "message": f"Gagal membaca file: {str(e)}"}
+
+# --- ENDPOINT CEK TYPO ---
 @app.post("/api/cek-typo")
 async def cek_typo(data: TypoInput):
     if not data.text:
