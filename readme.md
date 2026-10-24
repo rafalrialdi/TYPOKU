@@ -1,6 +1,6 @@
 # TypoKu : Asisten Penulisan Akademik AI
 
-**TypoKu** adalah platform asisten penulisan berbasis kecerdasan buatan (*Artificial Intelligence/AI*) yang dirancang untuk membantu mahasiswa, dosen, dan akademisi Indonesia dalam menyempurnakan kualitas tulisan. TypoKu menyediakan fitur koreksi ejaan dan salah ketik (*typo*), parafrase kalimat, serta penerjemahan naskah akademik.
+**TypoKu** adalah platform asisten penulisan berbasis kecerdasan buatan (*Artificial Intelligence/AI*) yang dirancang untuk membantu mahasiswa, dosen, dan akademisi Indonesia dalam menyempurnakan kualitas tulisan. TypoKu menyediakan fitur koreksi ejaan dan salah ketik (*typo*), parafrase kalimat, penerjemahan naskah akademik, serta ekstraksi teks dari dokumen PDF dan DOCX.
 
 ---
 
@@ -9,48 +9,41 @@
 ### 1. Koreksi Typo dan Ejaan
 Membantu mendeteksi kesalahan penulisan, ejaan, penggunaan imbuhan, dan kata yang kurang efektif berdasarkan kaidah bahasa Indonesia.
 
-- Mendukung input teks langsung dan dokumen.
-- Mendukung format dokumen DOCX dan PDF sesuai implementasi backend.
-- Menampilkan hasil koreksi dan jumlah perbaikan.
-- Menyediakan hasil dokumen yang dapat diunduh.
+- Mendukung input teks langsung maupun dari ekstraksi dokumen.
+- Mengembalikan daftar kata salah, saran perbaikan, dan keterangannya dalam format terstruktur (JSON).
 
 ### 2. Parafrase Cerdas
 Membantu menyusun ulang kalimat agar lebih jelas, lugas, formal, atau akademik tanpa mengubah inti makna.
 
-- Mendukung input teks dan dokumen.
-- Menyediakan pilihan gaya penulisan.
-- Menampilkan hasil parafrase.
-- Menyediakan hasil dokumen untuk diunduh.
+- Mendukung penyesuaian gaya penulisan (misal: gaya akademik).
 
 ### 3. Penerjemah Akademik
 Membantu menerjemahkan teks akademik dari bahasa Indonesia ke bahasa Inggris maupun sebaliknya.
 
 - Mendukung penerjemahan dua arah (Indonesia–Inggris).
-- Mempertahankan konteks dan terminologi akademik sebisa mungkin.
-- Menampilkan hasil terjemahan yang dapat ditinjau kembali.
+- Mempertahankan konteks dan terminologi akademik.
 
-### 4. Manajemen Dokumen dan Riwayat
-Menyediakan antarmuka untuk membantu pengguna mengelola dokumen dan memantau hasil pemrosesan sesuai fitur yang tersedia pada aplikasi.
-
-### 5. Pilihan Paket Layanan
-Menyediakan rancangan tingkatan layanan Gratis, Pro, dan Premium untuk menyesuaikan kebutuhan pengguna.
+### 4. Ekstraksi Dokumen (PDF & DOCX)
+Membaca dan mengekstrak teks dari file dokumen yang diunggah pengguna untuk dimasukkan ke dalam editor aplikasi secara otomatis.
 
 ---
 
 ## Teknologi yang Digunakan
 
 ### Frontend
-- **React.js** — membangun antarmuka aplikasi.
-- **Vite** — development server dan build tool.
-- **React Router DOM** — mengatur navigasi ant halaman.
-- **React Icons** — menyediakan ikon antarmuka.
-- **CSS** — mengatur tampilan dan responsivitas aplikasi.
+- **React.js** : membangun antarmuka aplikasi.
+- **Vite** : development server dan build tool.
+- **React Router DOM** : mengatur navigasi antar halaman.
+- **React Icons** : menyediakan ikon antarmuka.
+- **CSS** : mengatur tampilan dan responsivitas aplikasi.
 
 ### Backend
-- **Python** — bahasa pemrograman backend.
-- **FastAPI** — membangun REST API.
-- **Scikit-learn / Joblib** — mendukung pemrosesan model machine learning, jika digunakan pada implementasi.
-- **Pandas / NumPy** — mendukung pengolahan data teks dan dataset.
+- **Python** : bahasa pemrograman utama.
+- **FastAPI & Uvicorn** : framework REST API yang cepat dan berbasis asynchronous.
+- **Google GenAI SDK** : integrasi dengan model AI Gemini (`gemini-3.8-flash`).
+- **PyPDF2 & python-docx** : pustaka ekstraksi teks dari file PDF dan Word (DOCX).
+- **python-multipart** : penanganan unggahan file (*file upload*).
+- **Scikit-learn & Joblib** : mendukung pemrosesan model machine learning lokal.
 
 ---
 
@@ -70,15 +63,14 @@ typoku/
 │
 ├── backend/
 │   ├── data/               # Dataset dan data pendukung
-│   ├── models/             # Model machine learning
+│   ├── models/             # Model machine learning (.joblib)
 │   ├── notebooks/          # Notebook eksperimen dan pelatihan
 │   ├── main.py             # Entry point FastAPI
 │   └── requirements.txt    # Dependensi Python
 │
+├── .gitignore              # Pengecualian file sensitif & virtualenv
 └── README.md
 ```
-
-> Struktur di atas merupakan gambaran direktori yang diharapkan. Sesuaikan dengan struktur aktual repositori jika terdapat perbedaan.
 
 ---
 
@@ -87,8 +79,8 @@ typoku/
 ### Prasyarat
 
 Pastikan perangkat telah memiliki:
-- [Node.js](https://nodejs.org/)
-- [Python](https://www.python.org/)
+- [Node.js](https://nodejs.org/) (v18+)
+- [Python](https://www.python.org/) (v3.10+)
 - Git
 
 ### 1. Clone Repositori
@@ -100,83 +92,87 @@ cd typoku
 
 ### 2. Menjalankan Frontend
 
-Buka terminal pada direktori proyek, lalu jalankan:
-
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Secara default, aplikasi Vite dapat diakses melalui:
-
-`http://localhost:5173`
+Aplikasi Vite dapat diakses melalui: `http://localhost:5173`
 
 ### 3. Menjalankan Backend
 
-Buka terminal baru, lalu masuk ke direktori backend:
+Buka terminal baru pada direktori `backend`:
 
 ```bash
 cd backend
 ```
 
-Buat virtual environment:
-
-```bash
-python -m venv venv
-```
-
-Aktifkan virtual environment sesuai sistem operasi.
+Buat dan aktifkan *virtual environment*:
 
 **Windows:**
-
 ```bash
+python -m venv venv
 venv\Scripts\activate
 ```
 
 **Linux/macOS:**
-
 ```bash
+python3 -m venv venv
 source venv/bin/activate
 ```
 
-Instal dependensi:
-
+Instal seluruh dependensi Python:
 ```bash
 pip install -r requirements.txt
 ```
 
-Jalankan server FastAPI:
+Konfigurasi file `.env` di folder `backend`:
+```env
+GEMINI_API_KEY=AIzaSy_GantiDenganApiKeyGeminiKamu
+```
 
+Jalankan server FastAPI:
 ```bash
 uvicorn main:app --reload
 ```
 
-Secara default, backend dapat diakses melalui:
-
-`http://localhost:8000`
-
-Dokumentasi interaktif API FastAPI dapat dibuka melalui:
-
-`http://localhost:8000/docs`
-
-**Catatan:** Pastikan file `requirements.txt` tersedia dan konfigurasi API frontend mengarah ke alamat backend yang sesuai.
+Backend dapat diakses di `http://localhost:8000` dan dokumentasi Swagger API di `http://localhost:8000/docs`.
 
 ---
 
 ## Dokumentasi API
 
-Bagian ini menjelaskan kontrak *request* dan contoh respons API dari backend FastAPI yang terintegrasi dengan Gemini AI.
+Seluruh endpoint backend mengembalikan respons JSON.
 
-### 1. Cek Typo dan Ejaan
+### 1. Ekstraksi Teks Dokumen (PDF/DOCX)
+Mengekstrak teks dari file yang diunggah pengguna.
 
-Mendeteksi kata yang salah ketik atau tidak baku dalam teks berdasarkan kaidah bahasa Indonesia.
+- **Endpoint:** `POST /api/ekstrak-teks`
+- **Content-Type:** `multipart/form-data`
+
+| Parameter | Tipe | Keterangan |
+|---|---|---|
+| `file` | File | File dokumen (.pdf atau .docx) |
+
+**Contoh Respons Berhasil:**
+```json
+{
+  "status": "success",
+  "filename": "draft_artikel.docx",
+  "extracted_text": "Ini adalah teks hasil ekstraksi dari file..."
+}
+```
+
+---
+
+### 2. Cek Typo dan Ejaan
+Mendeteksi kata yang salah ketik atau tidak baku dalam teks.
 
 - **Endpoint:** `POST /api/cek-typo`
 - **Content-Type:** `application/json`
 
 **Contoh Request Body:**
-
 ```json
 {
   "text": "saya beli apotik dan jadual di pasar"
@@ -184,7 +180,6 @@ Mendeteksi kata yang salah ketik atau tidak baku dalam teks berdasarkan kaidah b
 ```
 
 **Contoh Respons Berhasil:**
-
 ```json
 {
   "status": "success",
@@ -204,15 +199,15 @@ Mendeteksi kata yang salah ketik atau tidak baku dalam teks berdasarkan kaidah b
 }
 ```
 
-### 2. Parafrase Cerdas
+---
 
-Menyusun ulang kalimat agar lebih jelas dan sesuai dengan gaya bahasa formal atau akademik tanpa mengubah inti maknanya.
+### 3. Parafrase Cerdas
+Menyusun ulang kalimat agar lebih sesuai dengan gaya bahasa akademik.
 
 - **Endpoint:** `POST /api/parafrase`
 - **Content-Type:** `application/json`
 
 **Contoh Request Body:**
-
 ```json
 {
   "text": "kiyoung suka makan salmon dari danau cermin",
@@ -221,7 +216,6 @@ Menyusun ulang kalimat agar lebih jelas dan sesuai dengan gaya bahasa formal ata
 ```
 
 **Contoh Respons Berhasil:**
-
 ```json
 {
   "status": "success",
@@ -229,15 +223,15 @@ Menyusun ulang kalimat agar lebih jelas dan sesuai dengan gaya bahasa formal ata
 }
 ```
 
-### 3. Penerjemah Akademik
+---
 
-Menerjemahkan teks akademik dari bahasa Indonesia ke bahasa Inggris maupun sebaliknya.
+### 4. Penerjemah Akademik
+Menerjemahkan teks akademik dua arah (Indonesia–Inggris).
 
 - **Endpoint:** `POST /api/terjemah`
 - **Content-Type:** `application/json`
 
 **Contoh Request Body:**
-
 ```json
 {
   "text": "mie adalah makanan favoritku",
@@ -246,7 +240,6 @@ Menerjemahkan teks akademik dari bahasa Indonesia ke bahasa Inggris maupun sebal
 ```
 
 **Contoh Respons Berhasil:**
-
 ```json
 {
   "status": "success",
@@ -256,26 +249,21 @@ Menerjemahkan teks akademik dari bahasa Indonesia ke bahasa Inggris maupun sebal
 }
 ```
 
-### Catatan Integrasi API
-
-- Seluruh endpoint menerima *request* dalam format JSON (`application/json`).
-- Frontend perlu mengirimkan header `Content-Type: application/json` saat melakukan request.
-- Endpoint `/api/cek-typo` mengembalikan `typo_list` yang berisi kata yang perlu diperbaiki, saran perbaikan, dan keterangannya.
-- Respons API di atas merupakan contoh format keluaran. Pastikan nama properti dan struktur respons sesuai dengan implementasi backend aktual.
-
 ---
 
-## Catatan Pengembangan
-
-TypoKu dikembangkan sebagai aplikasi pendukung penulisan akademik. Hasil koreksi, parafrase, dan terjemahan sebaiknya tetap ditinjau oleh pengguna sebelum digunakan dalam dokumen resmi atau publikasi ilmiah.
-
-AI berfungsi sebagai alat bantu, bukan pengganti proses penyuntingan dan verifikasi sumber.
+### Batasan Penggunaan & Catatan Integrasi
+1. **Batasan Kata (Word Limit):** Disarankan agar *frontend* membatasi input maksimal **1.000 – 2.000 kata** per pengiriman API demi menjaga waktu respons AI tetap di bawah 10 detik.
+2. **Ukuran File Dokumen:** Maksimal **5 MB** untuk format `.pdf` dan `.docx`.
+3. **Alur UI Load Document:**
+   - User mengunggah file => Frontend memanggil `/api/ekstrak-teks`.
+   - Teks hasil ekstraksi ditampilkan pada textarea/editor *frontend*.
+   - User menekan tombol tindakan (Cek Typo / Parafrase / Terjemah) → Frontend memanggil endpoint yang sesuai.
 
 ---
 
 ## Pengembang
 
-Proyek ini dikembangkan sebagai bagian dari tugas kelompok Digital Enterpreneurship.
+Proyek ini dikembangkan sebagai bagian dari tugas Digital Entrepreneurship.
 
 ---
 
