@@ -166,87 +166,102 @@ Dokumentasi interaktif API FastAPI dapat dibuka melalui:
 
 ## Dokumentasi API
 
-Bagian ini menjelaskan kontrak request dan contoh respons API untuk fitur utama TypoKu. Contoh berikut merupakan format yang diharapkan dan perlu disesuaikan dengan implementasi backend aktual.
+Bagian ini menjelaskan kontrak *request* dan contoh respons API dari backend FastAPI yang terintegrasi dengan Gemini AI.
 
-### 1. Koreksi Typo
+### 1. Cek Typo dan Ejaan
 
-**Endpoint:** `POST /api/koreksi`
+Mendeteksi kata yang salah ketik atau tidak baku dalam teks berdasarkan kaidah bahasa Indonesia.
 
-**Request:** `multipart/form-data`
+- **Endpoint:** `POST /api/cek-typo`
+- **Content-Type:** `application/json`
 
-| Properti | Tipe | Keterangan |
-|---|---|---|
-| `file` | File | Dokumen DOCX atau PDF |
-| `text` | String | Teks yang ingin dikoreksi |
+**Contoh Request Body:**
 
-Gunakan `file` atau `text` sesuai metode input yang didukung backend.
+```json
+{
+  "text": "saya beli apotik dan jadual di pasar"
+}
+```
 
-**Contoh respons:**
+**Contoh Respons Berhasil:**
 
 ```json
 {
   "status": "success",
-  "message": "Koreksi berhasil dilakukan",
-  "original_filename": "Makalah_Machine_Learning.docx",
-  "result_text": "Teks hasil perbaikan ejaan dan typo...",
-  "corrections_count": 4,
-  "download_url": "https://api-typoku.up.railway.app/download/result_makalah.docx"
+  "original_text": "saya beli apotik dan jadual di pasar",
+  "typo_list": [
+    {
+      "kata_salah": "apotik",
+      "saran_perbaikan": "apotek",
+      "keterangan": "Tidak baku"
+    },
+    {
+      "kata_salah": "jadual",
+      "saran_perbaikan": "jadwal",
+      "keterangan": "Tidak baku"
+    }
+  ]
 }
 ```
 
 ### 2. Parafrase Cerdas
 
-**Endpoint:** `POST /api/parafrase`
+Menyusun ulang kalimat agar lebih jelas dan sesuai dengan gaya bahasa formal atau akademik tanpa mengubah inti maknanya.
 
-**Request:** `multipart/form-data`
+- **Endpoint:** `POST /api/parafrase`
+- **Content-Type:** `application/json`
 
-| Properti | Tipe | Keterangan |
-|---|---|---|
-| `text` | String | Teks yang ingin diparafrase |
-| `file` | File | Dokumen yang ingin diproses |
-| `style` | String | Gaya parafrase, misalnya `akademik` atau `formal` |
+**Contoh Request Body:**
 
-**Contoh respons:**
+```json
+{
+  "text": "kiyoung suka makan salmon dari danau cermin",
+  "style": "akademik"
+}
+```
+
+**Contoh Respons Berhasil:**
 
 ```json
 {
   "status": "success",
-  "result_text": "Hasil kalimat yang sudah diparafrase...",
-  "download_url": "https://api-typoku.up.railway.app/download/result_parafrase.docx"
+  "result_text": "Kiyoung memiliki preferensi konsumsi ikan salmon yang berasal dari kawasan Danau Cermin."
 }
 ```
 
 ### 3. Penerjemah Akademik
 
-**Endpoint:** `POST /api/terjemah`
+Menerjemahkan teks akademik dari bahasa Indonesia ke bahasa Inggris maupun sebaliknya.
 
-**Request:** `multipart/form-data`
+- **Endpoint:** `POST /api/terjemah`
+- **Content-Type:** `application/json`
 
-| Properti | Tipe | Keterangan |
-|---|---|---|
-| `text` | String | Teks yang ingin diterjemahkan |
-| `file` | File | Dokumen yang ingin diterjemahkan |
-| `target_lang` | String | Bahasa tujuan: `en` atau `id` |
+**Contoh Request Body:**
 
-**Contoh respons:**
+```json
+{
+  "text": "mie adalah makanan favoritku",
+  "target_lang": "en"
+}
+```
+
+**Contoh Respons Berhasil:**
 
 ```json
 {
   "status": "success",
   "source_language": "id",
   "target_language": "en",
-  "translated_text": "Translated academic text result...",
-  "download_url": "https://api-typoku.up.railway.app/download/result_translate.docx"
+  "result_text": "Noodles are my favorite food."
 }
 ```
 
 ### Catatan Integrasi API
 
-- Request berbasis file menggunakan `multipart/form-data`.
-- Properti respons di atas adalah contoh kontrak API, bukan jaminan bahwa seluruh properti sudah tersedia pada backend.
-- Frontend perlu menangani respons berhasil, kegagalan request, dan validasi input.
-- Tautan unduhan harus berasal dari respons backend yang valid.
-- URL backend pada contoh perlu disesuaikan dengan alamat deployment aktual.
+- Seluruh endpoint menerima *request* dalam format JSON (`application/json`).
+- Frontend perlu mengirimkan header `Content-Type: application/json` saat melakukan request.
+- Endpoint `/api/cek-typo` mengembalikan `typo_list` yang berisi kata yang perlu diperbaiki, saran perbaikan, dan keterangannya.
+- Respons API di atas merupakan contoh format keluaran. Pastikan nama properti dan struktur respons sesuai dengan implementasi backend aktual.
 
 ---
 
