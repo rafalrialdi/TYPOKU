@@ -1,0 +1,18 @@
+# FRONTEND
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# BACKEND
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/*.joblib
+
+# SYSTEM & ENVIRONMENT
+.DS_Store
+Thumbs.db
+.env
+.env.local
+.vscode/
+*.log
