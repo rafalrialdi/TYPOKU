@@ -78,10 +78,12 @@ typoku/
 
 ### Prasyarat
 
-Pastikan perangkat telah memiliki:
-- [Node.js](https://nodejs.org/) (v18+)
-- [Python](https://www.python.org/) (v3.10+)
-- Git
+Pastikan perangkat telah memiliki lingkungan berikut dengan versi yang didukung (disarankan menggunakan patch versi terbaru untuk alasan keamanan):
+
+- **Node.js**: v18.x atau lebih baru
+- **Python**: v3.10.x – v3.13.x (Disarankan menggunakan patch rilis terbaru)
+- **Git**: v2.x atau lebih baru
+- **Pip**: Disarankan memperbarui pip ke versi terbaru (`python -m pip install --upgrade pip`)
 
 ### 1. Clone Repositori
 
@@ -257,7 +259,7 @@ Menerjemahkan teks akademik dua arah (Indonesia–Inggris).
 3. **Alur UI Load Document:**
    - User mengunggah file => Frontend memanggil `/api/ekstrak-teks`.
    - Teks hasil ekstraksi ditampilkan pada textarea/editor *frontend*.
-   - User menekan tombol tindakan (Cek Typo / Parafrase / Terjemah) → Frontend memanggil endpoint yang sesuai.
+   - User menekan tombol tindakan (Cek Typo / Parafrase / Terjemah) => Frontend memanggil endpoint yang sesuai.
 
 ---
 
