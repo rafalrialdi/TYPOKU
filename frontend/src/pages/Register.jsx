@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight, FiCheckCircle, FiShield } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiChevronRight, FiCheckCircle, FiShield } from 'react-icons/fi';
 import logoImg from '../assets/logo.svg';
 import './style.css';
 
@@ -11,8 +11,7 @@ export default function Register() {
 
   const handleRegister = (e) => {
     e.preventDefault();
-    // Dummy register: arahkan langsung ke dashboard
-    navigate('/dashboard');
+    navigate('/login');
   };
 
   return (
@@ -25,7 +24,7 @@ export default function Register() {
       <div className="auth-card-inner">
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', fontWeight: 'bold', color: '#4F46E5', backgroundColor: '#EEF2FF', padding: '0.25rem 0.75rem', borderRadius: '999px', marginBottom: '1rem' }}>
-            ⚡ MULAI GRATIS 7 HARI
+            MULAI GRATIS 7 HARI
           </span>
           <h2 className="auth-title" style={{ justifyContent: 'center' }}>Buat Akun TypoKu</h2>
           <p className="auth-subtitle" style={{ margin: 0 }}>Tingkatkan kualitas tulisan akademik dan tugasmu dengan bantuan AI cerdas.</p>
@@ -94,12 +93,12 @@ export default function Register() {
           <div className="form-options">
             <label className="checkbox-label" style={{ fontSize: '0.8rem', alignItems: 'flex-start' }}>
               <input type="checkbox" style={{ accentColor: '#4F46E5', width: '16px', height: '16px', marginTop: '2px' }} required />
-              <span>Saya menyetujui <Link to="#" className="auth-link">Syarat & Ketentuan</Link> serta <Link to="#" className="auth-link">Kebijakan Privasi</Link> TypoKu.</span>
+              <span>Saya menyetujui <Link to="/syarat" className="auth-link">Syarat & Ketentuan</Link> serta <Link to="/privasi" className="auth-link">Kebijakan Privasi</Link> TypoKu.</span>
             </label>
           </div>
 
           <button type="submit" className="btn-auth-primary">
-            Daftar Sekarang <FiArrowRight />
+            Daftar Sekarang <FiChevronRight />
           </button>
         </form>
 
@@ -111,7 +110,7 @@ export default function Register() {
         </button>
 
         <div className="auth-footer-text">
-          Sudah punya akun? <Link to="/login" className="auth-link">Masuk di sini <FiArrowRight style={{ verticalAlign: 'middle' }}/></Link>
+          Sudah punya akun? <Link to="/login" className="auth-link">Masuk di sini <FiChevronRight style={{ verticalAlign: 'middle' }}/></Link>
         </div>
 
         <div className="secure-badge-box">

@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { FiSearch, FiBell } from 'react-icons/fi';
+import profileImg from '../assets/profile.svg';
 import './layout.css';
 
 export default function DashboardLayout() {
@@ -11,7 +12,7 @@ export default function DashboardLayout() {
 
       {/* Konten Utama */}
       <div className="dashboard-content-area">
-        {/* Header / Navbar Atas Dashboard */}
+        {/* Navbar Dashboard */}
         <header className="dashboard-header">
           
           {/* Pencarian */}
@@ -22,14 +23,20 @@ export default function DashboardLayout() {
           
           {/* Notifikasi & Profil */}
           <div className="dashboard-header-right">
-            <FiBell size={20} color="#4b5563" className="dashboard-bell" />
+  
+            <div className="notification-bell-container">
+              <FiBell size={20} color="#4b5563" className="dashboard-bell" />
+              <span className="notification-dot"></span>
+            </div>
+            
             <div className="profile-wrapper">
-              <div className="profile-avatar">P</div>
+              <img src={profileImg} alt="Profile" className="profile-avatar-img" />
               <div className="profile-info">
-                <span className="profile-name">Prima</span>
+                <span className="profile-name">Aprima Sunjani</span>
                 <span className="profile-role">Pro Member</span>
               </div>
             </div>
+            
           </div>
         </header>
 

@@ -1,5 +1,5 @@
 import { FiPlus, FiType, FiRefreshCw, FiGlobe, FiArrowRight, FiFileText, FiCheckCircle, FiClock, FiStar } from 'react-icons/fi';
-import './style.css';
+import './dashboard.css';
 
 export default function Dashboard() {
   return (

@@ -7,7 +7,9 @@ export default function Footer() {
     <footer className="footer">
       <div className="footer-col-brand">
         <div className="nav-left" style={{ marginBottom: '1.5rem' }}>
-          <img src={logoImg} alt="Logo TypoKu" style={{ height: '40px' }} />
+          <Link to="/">
+            <img src={logoImg} alt="Logo TypoKu" style={{ height: '40px' }} />
+          </Link>
         </div>
         <p className="footer-desc">
           Asisten penulisan AI canggih untuk menyempurnakan tata bahasa, mendeteksi salah ketik, dan memparafrase kalimat secara instan.
@@ -17,8 +19,8 @@ export default function Footer() {
       <div className="footer-col">
         <h4 className="footer-title">Produk</h4>
         <div className="footer-links">
-          <Link to="#" className="footer-link">Fitur Utama</Link>
-          <Link to="#" className="footer-link">Cara Kerja</Link>
+          <a href="/#fitur" className="footer-link">Fitur Utama</a>
+          <a href="/#cara-kerja" className="footer-link">Cara Kerja</a>
           <Link to="/harga" className="footer-link">Paket & Harga</Link>
         </div>
       </div>
@@ -26,16 +28,16 @@ export default function Footer() {
       <div className="footer-col">
         <h4 className="footer-title">Perusahaan</h4>
         <div className="footer-links">
-          <Link to="#" className="footer-link">Tentang TypoKu</Link>
-          <Link to="#" className="footer-link">Pusat Bantuan</Link>
+          <Link to="/tentang" className="footer-link">Tentang TypoKu</Link>
+          <Link to="/bantuan" className="footer-link">Pusat Bantuan</Link>
         </div>
       </div>
 
       <div className="footer-col">
         <h4 className="footer-title">Legalitas</h4>
         <div className="footer-links">
-          <Link to="#" className="footer-link">Kebijakan Privasi</Link>
-          <Link to="#" className="footer-link">Syarat & Ketentuan</Link>
+          <Link to="/privasi" className="footer-link">Kebijakan Privasi</Link>
+          <Link to="/syarat" className="footer-link">Syarat & Ketentuan</Link>
         </div>
       </div>
     </footer>
