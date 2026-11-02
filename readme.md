@@ -7,10 +7,10 @@
 ## Fitur Utama
 
 ### 1. Koreksi Typo dan Ejaan
-Membantu mendeteksi kesalahan penulisan, ejaan, penggunaan imbuhan, dan kata yang kurang efektif berdasarkan kaidah bahasa Indonesia.
+Membantu mendeteksi dan memperbaiki kesalahan penulisan, ejaan, serta kata tidak baku berdasarkan kaidah bahasa Indonesia.
 
-- Mendukung input teks langsung maupun dari ekstraksi dokumen.
-- Mengembalikan daftar kata salah, saran perbaikan, dan keterangannya dalam format terstruktur (JSON).
+- Menerima unggahan file `.pdf` atau `.docx`, lalu mengekstrak teksnya secara otomatis.
+- Mengembalikan isi teks yang sudah diperbaiki dengan sorotan kuning pada setiap kata yang diperbaiki.
 
 ### 2. Parafrase Cerdas
 Membantu menyusun ulang kalimat agar lebih jelas, lugas, formal, atau akademik tanpa mengubah inti makna.
@@ -22,9 +22,6 @@ Membantu menerjemahkan teks akademik dari bahasa Indonesia ke bahasa Inggris mau
 
 - Mendukung penerjemahan dua arah (Indonesia–Inggris).
 - Mempertahankan konteks dan terminologi akademik.
-
-### 4. Ekstraksi Dokumen (PDF & DOCX)
-Membaca dan mengekstrak teks dari file dokumen yang diunggah pengguna untuk dimasukkan ke dalam editor aplikasi secara otomatis.
 
 ---
 
@@ -38,12 +35,13 @@ Membaca dan mengekstrak teks dari file dokumen yang diunggah pengguna untuk dima
 - **CSS** : mengatur tampilan dan responsivitas aplikasi.
 
 ### Backend
-- **Python** : bahasa pemrograman utama.
-- **FastAPI & Uvicorn** : framework REST API yang cepat dan berbasis asynchronous.
+- **Node.js & Express** : bahasa pemrograman dan framework REST API.
 - **Google GenAI SDK** : integrasi dengan model AI Gemini (`gemini-3.8-flash`).
-- **PyPDF2 & python-docx** : pustaka ekstraksi teks dari file PDF dan Word (DOCX).
-- **python-multipart** : penanganan unggahan file (*file upload*).
-- **Scikit-learn & Joblib** : mendukung pemrosesan model machine learning lokal.
+- **pdf-parse & mammoth** : pustaka ekstraksi teks dari file PDF dan Word (DOCX).
+- **Multer** : penanganan unggahan file (*file upload*).
+- **Helmet, CORS & Morgan** : keamanan HTTP, akses lintas origin, dan logging request.
+- **dotenv** : pengelolaan variabel lingkungan.
+- **Nodemon** : auto-reload saat pengembangan.
 
 ---
 
@@ -62,13 +60,16 @@ typoku/
 │   └── package.json
 │
 ├── backend/
-│   ├── data/               # Dataset dan data pendukung
-│   ├── models/             # Model machine learning (.joblib)
-│   ├── notebooks/          # Notebook eksperimen dan pelatihan
-│   ├── main.py             # Entry point FastAPI
-│   └── requirements.txt    # Dependensi Python
+│   ├── controllers/        # Logika pemrosesan endpoint
+│   ├── middleware/         # Middleware kustom (masih kosong)
+│   ├── routes/             # Definisi rute API
+│   ├── .env                # Variabel lingkungan (tidak di-commit)
+│   ├── .gitignore
+│   ├── package.json
+│   ├── package-lock.json
+│   └── server.js           # Entry point Express
 │
-├── .gitignore              # Pengecualian file sensitif & virtualenv
+├── .gitignore              # Pengecualian file sensitif
 └── README.md
 ```
 
@@ -80,10 +81,9 @@ typoku/
 
 Pastikan perangkat telah memiliki lingkungan berikut dengan versi yang didukung (disarankan menggunakan patch versi terbaru untuk alasan keamanan):
 
-- **Node.js**: v18.x atau lebih baru
-- **Python**: v3.10.x – v3.13.x (Disarankan menggunakan patch rilis terbaru)
+- **Node.js**: v20.x atau lebih baru (disarankan LTS terbaru)
+- **npm**: v10.x atau lebih baru
 - **Git**: v2.x atau lebih baru
-- **Pip**: Disarankan memperbarui pip ke versi terbaru (`python -m pip install --upgrade pip`)
 
 ### 1. Clone Repositori
 
@@ -108,38 +108,27 @@ Buka terminal baru pada direktori `backend`:
 
 ```bash
 cd backend
-```
-
-Buat dan aktifkan *virtual environment*:
-
-**Windows:**
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-**Linux/macOS:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-Instal seluruh dependensi Python:
-```bash
-pip install -r requirements.txt
+npm install
 ```
 
 Konfigurasi file `.env` di folder `backend`:
 ```env
+PORT=8000
 GEMINI_API_KEY=AIzaSy_GantiDenganApiKeyGeminiKamu
 ```
 
-Jalankan server FastAPI:
+Jalankan server Express:
+
 ```bash
-uvicorn main:app --reload
+npm run dev
 ```
 
-Backend dapat diakses di `http://localhost:8000` dan dokumentasi Swagger API di `http://localhost:8000/docs`.
+Untuk mode produksi:
+```bash
+npm start
+```
+
+Backend dapat diakses di `http://localhost:8000`.
 
 ---
 
@@ -147,63 +136,56 @@ Backend dapat diakses di `http://localhost:8000` dan dokumentasi Swagger API di 
 
 Seluruh endpoint backend mengembalikan respons JSON.
 
-### 1. Ekstraksi Teks Dokumen (PDF/DOCX)
-Mengekstrak teks dari file yang diunggah pengguna.
+### 1. Cek Typo dan Ejaan
+Menerima file dokumen (.pdf / .docx) atau teks mentah. Mengembalikan teks asli dengan sorotan merah coret garis pada kata salah/typo, teks hasil perbaikan dengan sorotan kuning pada kata yang dibetulkan, serta link unduhan dokumen.
 
-- **Endpoint:** `POST /api/ekstrak-teks`
-- **Content-Type:** `multipart/form-data`
+- **Endpoint:** `POST /api/cek-typo`
+- **Content-Type:** `multipart/form-data` atau `application/json`
 
 | Parameter | Tipe | Keterangan |
 |---|---|---|
-| `file` | File | File dokumen (.pdf atau .docx) |
+| `file` | File | File dokumen (.pdf atau .docx) — opsional jika menggunakan `text` |
+| `text` | String | Teks langsung yang ingin diperiksa — opsional jika menggunakan `file` |
 
 **Contoh Respons Berhasil:**
 ```json
 {
   "status": "success",
   "filename": "draft_artikel.docx",
-  "extracted_text": "Ini adalah teks hasil ekstraksi dari file..."
+  "total_errors": 2,
+  "original_text": "saya beli <mark style=\"background-color: #fee2e2; color: #dc2626; text-decoration: line-through; padding: 2px 4px; border-radius: 4px; font-weight: 500;\">apotik</mark> dan <mark style=\"background-color: #fee2e2; color: #dc2626; text-decoration: line-through; padding: 2px 4px; border-radius: 4px; font-weight: 500;\">jadual</mark> di pasar",
+  "result_text": "saya beli <mark style=\"background-color: #fef08a; color: #854d0e; padding: 2px 4px; border-radius: 4px; font-weight: 500;\">apotek</mark> dan <mark style=\"background-color: #fef08a; color: #854d0e; padding: 2px 4px; border-radius: 4px; font-weight: 500;\">jadwal</mark> di pasar",
+  "clean_result_text": "saya beli apotek dan jadwal di pasar",
+  "download_url": "/api/cek-typo/download/8ee017d5-4aec-4413-9d58-f0bb102f563c?format=pdf",
+  "download_link": "http://localhost:8000/api/cek-typo/download/8ee017d5-4aec-4413-9d58-f0bb102f563c?format=pdf"
 }
 ```
 
 ---
 
-### 2. Cek Typo dan Ejaan
-Mendeteksi kata yang salah ketik atau tidak baku dalam teks.
+### 2. Parafrase Dokumen / Teks (Blok Kuning)
+Memparafrase dokumen atau teks dengan sorotan kuning pada bagian yang diubah dan menyediakan tautan unduh.
 
-- **Endpoint:** `POST /api/cek-typo`
-- **Content-Type:** `application/json`
+- **Endpoint:** `POST /api/cek-typo/parafrase`
+- **Content-Type:** `multipart/form-data` atau `application/json`
 
-**Contoh Request Body:**
-```json
-{
-  "text": "saya beli apotik dan jadual di pasar"
-}
-```
-
-**Contoh Respons Berhasil:**
-```json
-{
-  "status": "success",
-  "original_text": "saya beli apotik dan jadual di pasar",
-  "typo_list": [
-    {
-      "kata_salah": "apotik",
-      "saran_perbaikan": "apotek",
-      "keterangan": "Tidak baku"
-    },
-    {
-      "kata_salah": "jadual",
-      "saran_perbaikan": "jadwal",
-      "keterangan": "Tidak baku"
-    }
-  ]
-}
-```
+| Parameter | Tipe | Keterangan |
+|---|---|---|
+| `file` | File | File dokumen (.pdf atau .docx) — opsional |
+| `text` | String | Teks naskah yang ingin diparafrase |
+| `style` | String | Gaya bahasa (default: `akademik`) |
 
 ---
 
-### 3. Parafrase Cerdas
+### 3. Unduh Hasil Pemeriksaan / Parafrase
+Mengunduh hasil perbaikan teks dalam format PDF, TXT, atau HTML.
+
+- **Endpoint:** `GET /api/cek-typo/download/:id?format=pdf` (atau `format=txt`)
+- **Content-Type:** `application/pdf` / `text/plain`
+
+---
+
+### 2. Parafrase Cerdas
 Menyusun ulang kalimat agar lebih sesuai dengan gaya bahasa akademik.
 
 - **Endpoint:** `POST /api/parafrase`
@@ -227,7 +209,7 @@ Menyusun ulang kalimat agar lebih sesuai dengan gaya bahasa akademik.
 
 ---
 
-### 4. Penerjemah Akademik
+### 3. Penerjemah Akademik
 Menerjemahkan teks akademik dua arah (Indonesia–Inggris).
 
 - **Endpoint:** `POST /api/terjemah`
@@ -256,10 +238,10 @@ Menerjemahkan teks akademik dua arah (Indonesia–Inggris).
 ### Batasan Penggunaan & Catatan Integrasi
 1. **Batasan Kata (Word Limit):** Disarankan agar *frontend* membatasi input maksimal **1.000 – 2.000 kata** per pengiriman API demi menjaga waktu respons AI tetap di bawah 10 detik.
 2. **Ukuran File Dokumen:** Maksimal **5 MB** untuk format `.pdf` dan `.docx`.
-3. **Alur UI Load Document:**
-   - User mengunggah file => Frontend memanggil `/api/ekstrak-teks`.
-   - Teks hasil ekstraksi ditampilkan pada textarea/editor *frontend*.
-   - User menekan tombol tindakan (Cek Typo / Parafrase / Terjemah) => Frontend memanggil endpoint yang sesuai.
+3. **Alur UI:**
+   - User mengunggah file => Frontend memanggil `/api/cek-typo` (file dikirim langsung).
+   - Backend mengekstrak teks, memperbaiki typo, dan mengembalikan `result_text` berisi HTML dengan sorotan kuning.
+   - Untuk Parafrase / Terjemah, frontend mengirim teks JSON ke endpoint yang sesuai.
 
 ---
 

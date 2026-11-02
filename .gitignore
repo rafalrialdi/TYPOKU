@@ -4,10 +4,8 @@ frontend/dist/
 frontend/.vite/
 
 # BACKEND
-backend/venv/
-backend/__pycache__/
-backend/*.pyc
-backend/*.joblib
+backend/node_modules/
+backend/.env
 
 # SYSTEM & ENVIRONMENT
 .DS_Store

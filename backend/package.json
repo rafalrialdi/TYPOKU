@@ -1,0 +1,40 @@
+{
+  "name": "typoku-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend API TypoKu menggunakan Express dan Google Gemini",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "typoku",
+    "express",
+    "gemini"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "@google/genai": "^2.31.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.2",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mammoth": "^1.13.0",
+    "midtrans-client": "^1.4.3",
+    "morgan": "^1.12.1",
+    "multer": "^2.5.0",
+    "mysql2": "^3.24.6",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.3.1",
+    "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.20.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
