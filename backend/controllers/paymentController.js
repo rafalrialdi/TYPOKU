@@ -2,13 +2,62 @@ const db = require('../confiq/database');
 const { coreApi, verifyNotificationSignature, clientKey } = require('../utils/midtrans');
 const { sendSuccess, sendError } = require('../utils/response');
 
+const RECONCILE_WINDOW_MINUTES = Number(process.env.PAYMENT_RECONCILE_MINUTES) || 60;
+
+function isWithinReconcileWindow(expiredAt) {
+  if (!expiredAt) return false;
+  const expiredTime = new Date(expiredAt).getTime();
+  const maxTime = expiredTime + RECONCILE_WINDOW_MINUTES * 60 * 1000;
+  return Date.now() <= maxTime;
+}
+
+async function syncOrderWithMidtrans(order) {
+  try {
+    const midtransStatus = await coreApi.transaction.status(order.order_code);
+    const transStatus = midtransStatus.transaction_status;
+    const fraud = midtransStatus.fraud_status;
+
+    if (transStatus === 'settlement' || (transStatus === 'capture' && fraud === 'accept')) {
+      await applyPaymentSettlement(order.id, midtransStatus);
+      return {
+        status: 'paid',
+        paid_at: midtransStatus.settlement_time || new Date(),
+        midtransStatus,
+      };
+    }
+
+    if (transStatus === 'expire') {
+      await db.query('UPDATE orders SET status = "expired" WHERE id = ? AND status != "paid"', [order.id]);
+      await db.query('UPDATE payment_transactions SET transaction_status = "expire" WHERE order_id = ?', [order.id]);
+      return { status: 'expired', midtransStatus };
+    }
+
+    if (['cancel', 'deny'].includes(transStatus)) {
+      await db.query('UPDATE orders SET status = "failed" WHERE id = ? AND status != "paid"', [order.id]);
+      await db.query('UPDATE payment_transactions SET transaction_status = ? WHERE order_id = ?', [transStatus, order.id]);
+      return { status: 'failed', midtransStatus };
+    }
+
+    return { status: order.status, midtransStatus };
+  } catch (error) {
+    if (order.status === 'pending') {
+      const isExpiredLocally = new Date(order.expired_at) <= new Date();
+      if (isExpiredLocally) {
+        await db.query('UPDATE orders SET status = "expired" WHERE id = ? AND status != "paid"', [order.id]);
+        return { status: 'expired', error };
+      }
+    }
+    return { status: order.status, error };
+  }
+}
+
 async function applyPaymentSettlement(orderId, midtransData = {}) {
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
 
     const [orders] = await connection.query(
-      'SELECT id, user_id, package_id, package_name, package_price, duration_days, total_amount, status FROM orders WHERE id = ? FOR UPDATE',
+      'SELECT id, user_id, package_id, package_name, package_price, duration_days, total_amount, status, created_at FROM orders WHERE id = ? FOR UPDATE',
       [orderId]
     );
 
@@ -59,40 +108,62 @@ async function applyPaymentSettlement(orderId, midtransData = {}) {
       ]
     );
 
-    // 3. Batalkan paket aktif sebelumnya agar paket baru langsung aktif dari sekarang
-    await connection.query(
-      'UPDATE user_subscriptions SET status = "cancelled" WHERE user_id = ? AND status = "active"',
+    // 3. Periksa benturan subscription aktif yang lebih baru
+    const [activeSubscriptions] = await connection.query(
+      `SELECT id, order_id, created_at
+       FROM user_subscriptions
+       WHERE user_id = ?
+         AND status = 'active'
+       ORDER BY created_at DESC
+       LIMIT 1
+       FOR UPDATE`,
       [order.user_id]
     );
 
-    // 4. Buat subscription baru yang aktif mulai dari sekarang
-    try {
-      await connection.query(
-        `INSERT INTO user_subscriptions (
-            user_id,
-            order_id,
-            package_id,
-            package_name,
-            package_price,
-            duration_days,
-            started_at,
-            expired_at,
-            status
-         ) VALUES (?, ?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? DAY), 'active')`,
-        [
-          order.user_id,
-          order.id,
-          order.package_id,
-          order.package_name,
-          order.package_price,
-          order.duration_days,
-          order.duration_days,
-        ]
+    const hasNewerActiveSubscription =
+      activeSubscriptions.length > 0 &&
+      activeSubscriptions[0].order_id !== order.id &&
+      new Date(activeSubscriptions[0].created_at) > new Date(order.created_at);
+
+    if (hasNewerActiveSubscription) {
+      console.log(
+        `[PAYMENT] Order ${order.id} pulih sebagai paid, tetapi user ${order.user_id} memiliki langganan aktif lebih baru. Lewati aktivasi paket.`
       );
-    } catch (subErr) {
-      // Jika duplicate order_id (UNIQUE key), abaikan karena sudah dibuat sebelumnya
-      if (subErr.code !== 'ER_DUP_ENTRY') {
-        throw subErr;
+    } else {
+      // Batalkan paket aktif sebelumnya agar paket baru langsung aktif dari sekarang
+      await connection.query(
+        'UPDATE user_subscriptions SET status = "cancelled" WHERE user_id = ? AND status = "active"',
+        [order.user_id]
+      );
+
+      // Buat subscription baru yang aktif mulai dari sekarang
+      try {
+        await connection.query(
+          `INSERT INTO user_subscriptions (
+              user_id,
+              order_id,
+              package_id,
+              package_name,
+              package_price,
+              duration_days,
+              started_at,
+              expired_at,
+              status
+           ) VALUES (?, ?, ?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? DAY), 'active')`,
+          [
+            order.user_id,
+            order.id,
+            order.package_id,
+            order.package_name,
+            order.package_price,
+            order.duration_days,
+            order.duration_days,
+          ]
+        );
+      } catch (subErr) {
+        if (subErr.code !== 'ER_DUP_ENTRY') {
+          throw subErr;
+        }
       }
     }
 
@@ -227,33 +298,16 @@ async function getPaymentStatus(req, res) {
 
     let order = orders[0];
 
-    // Jika status masih pending, periksa status terkini ke Midtrans API
-    if (order.status === 'pending') {
-      try {
-        const midtransStatus = await coreApi.transaction.status(orderCode);
-        const transStatus = midtransStatus.transaction_status;
-        const fraud = midtransStatus.fraud_status;
+    // Jika status pending atau expired dalam jendela rekonsiliasi, sinkronkan ke Midtrans
+    const shouldSyncWithMidtrans =
+      order.status === 'pending' ||
+      (order.status === 'expired' && isWithinReconcileWindow(order.expired_at));
 
-        if (transStatus === 'settlement' || (transStatus === 'capture' && fraud === 'accept')) {
-          await applyPaymentSettlement(order.id, midtransStatus);
-          order.status = 'paid';
-          order.paid_at = midtransStatus.settlement_time || new Date();
-        } else if (transStatus === 'expire') {
-          await db.query('UPDATE orders SET status = "expired" WHERE id = ?', [order.id]);
-          await db.query('UPDATE payment_transactions SET transaction_status = "expire" WHERE order_id = ?', [order.id]);
-          order.status = 'expired';
-        } else if (['cancel', 'deny'].includes(transStatus)) {
-          await db.query('UPDATE orders SET status = "failed" WHERE id = ?', [order.id]);
-          await db.query('UPDATE payment_transactions SET transaction_status = ? WHERE order_id = ?', [transStatus, order.id]);
-          order.status = 'failed';
-        }
-      } catch (checkErr) {
-        // Jika belum tercatat di Midtrans (misal popup belum dibuka), cek expiry local
-        const isExpiredLocally = new Date(order.expired_at) <= new Date();
-        if (isExpiredLocally) {
-          await db.query('UPDATE orders SET status = "expired" WHERE id = ?', [order.id]);
-          order.status = 'expired';
-        }
+    if (shouldSyncWithMidtrans) {
+      const syncResult = await syncOrderWithMidtrans(order);
+      order.status = syncResult.status;
+      if (syncResult.paid_at) {
+        order.paid_at = syncResult.paid_at;
       }
     }
 
@@ -282,4 +336,7 @@ module.exports = {
   applyPaymentSettlement,
   handleMidtransNotification,
   getPaymentStatus,
+  syncOrderWithMidtrans,
+  isWithinReconcileWindow,
+  RECONCILE_WINDOW_MINUTES,
 };

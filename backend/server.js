@@ -8,6 +8,7 @@ const morgan = require('morgan');
 const routes = require('./routes');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const initExpireSubscriptionJob = require('./jobs/expireSubscription');
+const initReconcilePaymentsJob = require('./jobs/reconcilePayments');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -48,6 +49,7 @@ app.use((err, req, res, next) => {
 });
 
 initExpireSubscriptionJob();
+initReconcilePaymentsJob();
 
 app.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
