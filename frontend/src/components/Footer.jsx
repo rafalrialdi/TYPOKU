@@ -1,43 +1,109 @@
-import { Link } from 'react-router-dom';
-import logoImg from '../assets/logo.svg';
+import { FiClock, FiMail, FiPhone } from 'react-icons/fi';
+import { FaGithub, FaInstagram, FaTiktok } from 'react-icons/fa';
 import './components.css';
+
+const socials = [
+  {
+    label: 'Instagram',
+    href: 'https://www.instagram.com/rafalsxc?dlrf=MTh1MWltOXh5MjVobQ%3D%3D&utm_source=qr',
+    icon: FaInstagram,
+  },
+  {
+    label: 'TikTok',
+    href: 'https://www.tiktok.com/@plumbls',
+    icon: FaTiktok,
+  },
+  {
+    label: 'GitHub',
+    href: 'https://github.com/rafalrialdi',
+    icon: FaGithub,
+  },
+];
+
+const produk = [
+  ['Pemeriksa Ejaan PUEBI', '#'],
+  ['Parafrase Cerdas', '/parafrase'],
+  ['Penerjemah Akademik', '/terjemah'],
+  ['Paket Langganan', '#paket'],
+];
+
+const sumberDaya = [
+  ['Panduan Kaidah PUEBI', '#'],
+  ['Dokumentasi API', '#'],
+  ['Hubungi Tim Dukungan', '#'],
+  ['Standar Sitasi Ilmiah', '#'],
+];
 
 export default function Footer() {
   return (
     <footer className="footer">
-      <div className="footer-col-brand">
-        <div className="nav-left" style={{ marginBottom: '1.5rem' }}>
-          <Link to="/">
-            <img src={logoImg} alt="Logo TypoKu" style={{ height: '40px' }} />
-          </Link>
-        </div>
-        <p className="footer-desc">
-          Asisten penulisan AI canggih untuk menyempurnakan tata bahasa, mendeteksi salah ketik, dan memparafrase kalimat secara instan.
-        </p>
-      </div>
+      <div className="footer-inner">
+        <div className="footer-grid">
+          <div>
+            <span className="footer-brand">TypoKu</span>
+            <p className="footer-desc">
+              Platform kecerdasan bahasa untuk standardisasi karya ilmiah, jurnal bereputasi, dan
+              kepatuhan kaidah PUEBI.
+            </p>
+          </div>
 
-      <div className="footer-col">
-        <h4 className="footer-title">Produk</h4>
-        <div className="footer-links">
-          <a href="/#fitur" className="footer-link">Fitur Utama</a>
-          <a href="/#cara-kerja" className="footer-link">Cara Kerja</a>
-          <Link to="/harga" className="footer-link">Paket & Harga</Link>
-        </div>
-      </div>
+          <div>
+            <h4 className="footer-title">Produk</h4>
+            <ul className="footer-links">
+              {produk.map(([label, href]) => (
+                <li key={label}>
+                  <a href={href} className="footer-link">{label}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-      <div className="footer-col">
-        <h4 className="footer-title">Perusahaan</h4>
-        <div className="footer-links">
-          <Link to="/tentang" className="footer-link">Tentang TypoKu</Link>
-          <Link to="/bantuan" className="footer-link">Pusat Bantuan</Link>
-        </div>
-      </div>
+          <div>
+            <h4 className="footer-title">Sumber Daya &amp; Bantuan</h4>
+            <ul className="footer-links">
+              {sumberDaya.map(([label, href]) => (
+                <li key={label}>
+                  <a href={href} className="footer-link">{label}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-      <div className="footer-col">
-        <h4 className="footer-title">Legalitas</h4>
-        <div className="footer-links">
-          <Link to="/privasi" className="footer-link">Kebijakan Privasi</Link>
-          <Link to="/syarat" className="footer-link">Syarat & Ketentuan</Link>
+          <div>
+            <h4 className="footer-title">Legal &amp; Kontak</h4>
+            <ul className="footer-links footer-links-contact">
+              <li className="footer-contact">
+                <FiMail />
+                <a href="mailto:bantuan@typoku.id" className="footer-link">bantuan@typoku.id</a>
+              </li>
+              <li className="footer-contact">
+                <FiPhone />
+                <a href="tel:+6281234567890" className="footer-link">+62 812-3456-7890</a>
+              </li>
+              <li className="footer-contact">
+                <FiClock />
+                <span>Senin - Jumat (08.00 - 17.00 WIB)</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="footer-bottom">
+          <span>&copy; 2026 TypoKu. Hak Cipta Dilindungi Undang-Undang.</span>
+          <div className="footer-social">
+            {socials.map(({ label, href, icon: Icon }) => (
+              <a
+                key={label}
+                href={href}
+                className="footer-social-link"
+                aria-label={label}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Icon />
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </footer>

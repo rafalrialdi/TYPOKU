@@ -1,53 +1,25 @@
-const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8000';
+import { request } from './apiClient';
+
+const API_BASE_URL = (import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8000');
 
 export async function cekTypo(payload) {
-  let response;
+  const response = await request('/api/cek-typo', {
+    method: 'POST',
+    body: payload instanceof FormData ? payload : { text: payload },
+    auth: true,
+  });
 
-  if (payload instanceof FormData) {
-    response = await fetch(`${API_BASE_URL}/api/cek-typo`, {
-      method: 'POST',
-      body: payload,
-    });
-  } else {
-    response = await fetch(`${API_BASE_URL}/api/cek-typo`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(typeof payload === 'string' ? { text: payload } : payload),
-    });
-  }
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || 'Gagal memeriksa typo');
-  }
-  return data;
+  return response;
 }
 
 export async function parafraseTypo(payload) {
-  let response;
+  const response = await request('/api/cek-typo/parafrase', {
+    method: 'POST',
+    body: payload instanceof FormData ? payload : { text: payload },
+    auth: true,
+  });
 
-  if (payload instanceof FormData) {
-    response = await fetch(`${API_BASE_URL}/api/cek-typo/parafrase`, {
-      method: 'POST',
-      body: payload,
-    });
-  } else {
-    response = await fetch(`${API_BASE_URL}/api/cek-typo/parafrase`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(typeof payload === 'string' ? { text: payload } : payload),
-    });
-  }
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || 'Gagal memparafrase teks');
-  }
-  return data;
+  return response;
 }
 
 export function getDownloadUrl(downloadId, format = 'pdf') {
@@ -55,33 +27,21 @@ export function getDownloadUrl(downloadId, format = 'pdf') {
 }
 
 export async function parafrase(text, style = 'akademik') {
-  const response = await fetch(`${API_BASE_URL}/api/parafrase`, {
+  const response = await request('/api/parafrase', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ text, style }),
+    body: { text, style },
+    auth: true,
   });
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || 'Gagal memparafrase teks');
-  }
-  return data;
+  return response;
 }
 
 export async function terjemah(text, targetLang = 'en') {
-  const response = await fetch(`${API_BASE_URL}/api/terjemah`, {
+  const response = await request('/api/terjemah', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ text, target_lang: targetLang }),
+    body: { text, target_lang: targetLang },
+    auth: true,
   });
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || 'Gagal menerjemahkan teks');
-  }
-  return data;
+  return response;
 }

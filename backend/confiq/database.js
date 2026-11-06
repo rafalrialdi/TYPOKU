@@ -48,4 +48,17 @@ const pool = mysql.createPool({
   keepAliveInitialDelay: 10000,
 });
 
+async function verifyDatabaseConnection() {
+  try {
+    const connection = await pool.getConnection();
+    await connection.ping();
+    connection.release();
+    console.log('[DATABASE] Database tersambung');
+  } catch (error) {
+    console.error('[DATABASE] Gagal menyambung ke database:', error.message);
+  }
+}
+
+verifyDatabaseConnection();
+
 module.exports = pool;
