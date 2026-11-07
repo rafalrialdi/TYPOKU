@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fi';
 import AuthHeader from '../components/AuthHeader';
 import { resetPassword, verifyResetToken } from '../services/authApi';
+import { useSubmit } from '../hooks/useSubmit';
 import { getPasswordRequirements, getPasswordStrength } from '../utils/password';
 
 export default function ResetPassword() {
@@ -29,7 +30,7 @@ export default function ResetPassword() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const { run: submitResetPassword, loading: submitting } = useSubmit(resetPassword);
 
   const strength = useMemo(() => getPasswordStrength(password), [password]);
   const requirements = useMemo(() => getPasswordRequirements(password), [password]);
@@ -89,6 +90,7 @@ export default function ResetPassword() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (submitting) return;
     const nextErrors = {};
 
     if (!password) {
@@ -110,11 +112,10 @@ export default function ResetPassword() {
       return;
     }
 
-    setSubmitting(true);
     setServerError('');
 
     try {
-      const result = await resetPassword({
+      const result = await submitResetPassword({
         token,
         password,
         password_confirm: passwordConfirm,
@@ -125,8 +126,6 @@ export default function ResetPassword() {
       setStatus('success');
     } catch (requestError) {
       setServerError(requestError.message);
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -318,7 +317,12 @@ export default function ResetPassword() {
           ) : null}
         </div>
 
-        <button className="auth-button auth-submit" type="submit" disabled={submitting}>
+        <button
+          className="auth-button auth-submit"
+          type="submit"
+          disabled={submitting}
+          aria-busy={submitting}
+        >
           {submitting ? 'Menyimpan...' : 'Simpan Kata Sandi Baru'}
           {submitting ? null : <FiArrowRight aria-hidden="true" />}
         </button>

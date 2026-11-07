@@ -1,0 +1,355 @@
+.paket-page {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding-block: clamp(2.5rem, 6vw, 5rem);
+  background-color: #ffffff;
+  color: #141b2b;
+}
+
+.paket-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 5vw, 3rem);
+}
+
+.paket-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  pointer-events: none;
+}
+
+.paket-glow--left {
+  top: -8rem;
+  left: -5rem;
+  width: 24rem;
+  height: 24rem;
+  background-color: rgba(238, 242, 255, 0.55);
+}
+
+.paket-glow--right {
+  top: 50%;
+  right: -6rem;
+  width: 20rem;
+  height: 20rem;
+  background-color: rgba(135, 146, 254, 0.18);
+}
+
+.paket-heading {
+  max-width: 48rem;
+  margin-inline: auto;
+  color: #141b2b;
+  font-size: clamp(1.65rem, 3.6vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.paket-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(1.25rem, 3vw, 2rem);
+  align-items: stretch;
+  margin-top: clamp(2rem, 5vw, 3.5rem);
+}
+
+.paket-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(1.5rem, 3vw, 2rem);
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.paket-card:hover {
+  box-shadow: 0 18px 40px -28px rgba(15, 23, 42, 0.35);
+}
+
+.paket-card--featured {
+  border-color: #c7d2fe;
+  background: linear-gradient(180deg, rgba(238, 242, 255, 0.65) 0%, #ffffff 45%);
+  box-shadow: 0 24px 50px -30px rgba(79, 70, 229, 0.55);
+  transform: translateY(-0.5rem);
+}
+
+.paket-card--skeleton {
+  min-height: 32rem;
+}
+
+.paket-card-eyebrow {
+  display: block;
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.paket-card-eyebrow--primary {
+  color: #4f46e5;
+}
+
+.paket-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.paket-card-title {
+  color: #141b2b;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.paket-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  background-color: #eef2ff;
+  color: #4f46e5;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.paket-card-desc {
+  margin-top: 0.25rem;
+  color: #4b5563;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.paket-card-price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  padding-block: 1rem;
+}
+
+.paket-card-price strong {
+  color: #141b2b;
+  font-size: clamp(1.9rem, 3vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.paket-card-price--primary strong {
+  color: #4f46e5;
+}
+
+.paket-card-period {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.paket-card-divider {
+  height: 1px;
+  background-color: #e5e7eb;
+}
+
+.paket-card-divider--primary {
+  background-color: #e0e7ff;
+}
+
+.paket-card-subtitle {
+  padding-top: 0.75rem;
+  color: #141b2b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.paket-card-features {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.paket-card-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  color: #4b5563;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.paket-card--featured .paket-card-feature {
+  color: #141b2b;
+}
+
+.paket-card-feature svg {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+  color: #4f46e5;
+  font-size: 1.125rem;
+}
+
+.paket-card-action {
+  margin-top: clamp(1.5rem, 3vw, 2rem);
+}
+
+.paket-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.625rem 1rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+  color: #141b2b;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.paket-button:hover {
+  background-color: #f1f5f9;
+  color: #4f46e5;
+}
+
+.paket-button svg {
+  font-size: 1.125rem;
+}
+
+.paket-button--primary {
+  background-color: #4f46e5;
+  color: #ffffff;
+  box-shadow: 0 8px 18px -10px rgba(79, 70, 229, 0.7);
+}
+
+.paket-button--primary:hover {
+  background-color: #4338ca;
+  color: #ffffff;
+}
+
+.paket-state {
+  max-width: 32rem;
+  margin: clamp(2rem, 5vw, 3rem) auto 0;
+  padding: 1.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.875rem;
+  background-color: #ffffff;
+  text-align: center;
+}
+
+.paket-state-title {
+  color: #141b2b;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.paket-state-text {
+  margin-top: 0.375rem;
+  color: #4b5563;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.paket-state-button {
+  width: auto;
+  margin: 1rem auto 0;
+  padding-inline: 1.25rem;
+}
+
+.paket-skel-eyebrow {
+  width: 42%;
+  height: 0.75rem;
+}
+
+.paket-skel-title {
+  width: 55%;
+  height: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.paket-skel-desc {
+  width: 92%;
+  height: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.paket-skel-price {
+  width: 48%;
+  height: 2.25rem;
+  margin-block: 1rem;
+}
+
+.paket-skel-divider {
+  height: 1px;
+  background-color: #e5e7eb;
+}
+
+.paket-skel-subtitle {
+  width: 40%;
+  height: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.paket-skel-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.paket-skel-feature {
+  width: 70%;
+  height: 0.875rem;
+}
+
+.paket-skel-button {
+  width: 100%;
+  height: 2.75rem;
+  margin-top: clamp(1.5rem, 3vw, 2rem);
+  border-radius: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .paket-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1023px) {
+  .paket-card--featured {
+    transform: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .paket-card {
+    padding: 1.25rem;
+  }
+}

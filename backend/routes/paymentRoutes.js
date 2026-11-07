@@ -9,6 +9,9 @@ const router = express.Router();
 // Webhook notifikasi Midtrans (Publik)
 router.post('/notification', paymentController.handleMidtransNotification);
 
+// Konfigurasi pembayaran publik (biaya admin & metode)
+router.get('/config', paymentController.getPaymentConfig);
+
 // Status pembayaran untuk frontend (Perlu Login)
 router.get(
   '/status/:orderCode',

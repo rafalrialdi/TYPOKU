@@ -24,7 +24,7 @@ const produk = [
   ['Pemeriksa Ejaan PUEBI', '#'],
   ['Parafrase Cerdas', '/parafrase'],
   ['Penerjemah Akademik', '/terjemah'],
-  ['Paket Langganan', '#paket'],
+  ['Paket Langganan', '/paket'],
 ];
 
 const sumberDaya = [

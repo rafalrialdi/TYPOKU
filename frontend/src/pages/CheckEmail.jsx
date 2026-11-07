@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fi';
 import AuthHeader from '../components/AuthHeader';
 import { requestPasswordReset } from '../services/authApi';
+import { useSubmit } from '../hooks/useSubmit';
 
 const RESET_EMAIL_KEY = 'typoku_reset_email';
 
@@ -18,27 +19,25 @@ export default function CheckEmail() {
   const [email] = useState(
     () => location.state?.email || sessionStorage.getItem(RESET_EMAIL_KEY) || ''
   );
-  const [resending, setResending] = useState(false);
+  const { run: resendPasswordReset, loading: resending } = useSubmit(requestPasswordReset);
   const [message, setMessage] = useState('');
   const [serverError, setServerError] = useState('');
 
   async function handleResend() {
+    if (resending) return;
     if (!email) {
       navigate('/lupa-kata-sandi');
       return;
     }
 
-    setResending(true);
     setMessage('');
     setServerError('');
 
     try {
-      await requestPasswordReset(email);
+      await resendPasswordReset(email);
       setMessage('Tautan pemulihan telah dikirim ulang. Silakan periksa kotak masuk Anda.');
     } catch (error) {
       setServerError(error.message);
-    } finally {
-      setResending(false);
     }
   }
 
@@ -87,8 +86,9 @@ export default function CheckEmail() {
           className="auth-button auth-button--secondary"
           type="button"
           onClick={handleResend}
-          disabled={resending}
-        >
+           disabled={resending}
+           aria-busy={resending}
+         >
           <FiRefreshCw aria-hidden="true" />
           {resending ? 'Mengirim ulang...' : 'Kirim Ulang Tautan'}
         </button>

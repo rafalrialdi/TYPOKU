@@ -5,7 +5,7 @@ const API_BASE_URL = (import.meta.env?.VITE_API_BASE_URL || 'http://localhost:80
 
 import { clearSession, getToken } from './session';
 
-async function request(path, { method = 'GET', body, auth = false, headers } = {}) {
+async function request(path, { method = 'GET', body, auth = false, headers, signal } = {}) {
   const token = getToken();
   const finalHeaders = { ...(headers || {}) };
 
@@ -22,6 +22,7 @@ async function request(path, { method = 'GET', body, auth = false, headers } = {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers: finalHeaders,
+    signal,
     ...(body !== undefined ? { body: body instanceof FormData ? body : JSON.stringify(body) } : {}),
   });
 

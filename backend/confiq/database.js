@@ -40,6 +40,7 @@ const pool = mysql.createPool({
   password: (process.env.DB_PASSWORD || '').trim(),
   database: (process.env.DB_NAME || 'typoku').trim(),
   port: parseInt((process.env.DB_PORT || '3306').toString().trim(), 10),
+  timezone: 'Z',
   ssl: buildSslConfig(),
   waitForConnections: true,
   connectionLimit: 10,

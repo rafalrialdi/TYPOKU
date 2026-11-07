@@ -3,12 +3,53 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FiChevronDown,
   FiChevronUp,
-  FiCreditCard,
+  FiFileText,
   FiLogOut,
   FiUser,
 } from 'react-icons/fi';
-import { clearSession, getUser, isAuthenticated } from '../services/session';
+import Skeleton from './Skeleton';
+import { useAuth } from '../context/AuthContext';
+import { isAuthenticated } from '../services/session';
 import './components.css';
+
+const STATUS_LABELS = {
+  pending: 'Menunggu',
+  paid: 'Lunas',
+  expired: 'Waktu Habis',
+  failed: 'Gagal',
+  cancelled: 'Dibatalkan',
+};
+
+const STATUS_CLASS = {
+  pending: 'pending',
+  paid: 'paid',
+  expired: 'expired',
+  failed: 'failed',
+  cancelled: 'failed',
+};
+
+const dateFormatter = new Intl.DateTimeFormat('id-ID', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
+
+const rupiahFormatter = new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  maximumFractionDigits: 0,
+});
+
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : dateFormatter.format(date);
+}
+
+function formatRupiah(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? rupiahFormatter.format(amount) : 'Rp 0';
+}
 
 function getInitials(user) {
   const source = user?.name?.trim() || user?.email?.trim() || '?';
@@ -26,25 +67,11 @@ export default function Navbar() {
   const navigate = useNavigate();
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
-  const [user, setUser] = useState(() => getUser());
+  const { user, logout, transactions, transactionsLoading } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const currentPath = location.pathname;
   const authenticated = Boolean(user) && isAuthenticated();
-
-  useEffect(() => {
-    function syncAuth() {
-      setUser(getUser());
-      setMenuOpen(false);
-    }
-
-    window.addEventListener('typoku:auth-changed', syncAuth);
-    window.addEventListener('storage', syncAuth);
-
-    return () => {
-      window.removeEventListener('typoku:auth-changed', syncAuth);
-      window.removeEventListener('storage', syncAuth);
-    };
-  }, []);
+  const recentTransactions = transactions.slice(0, 3);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -82,7 +109,7 @@ export default function Navbar() {
   }, [menuOpen]);
 
   function handleLogout() {
-    clearSession();
+    logout();
     setMenuOpen(false);
     navigate('/login', { replace: true });
   }
@@ -102,7 +129,9 @@ export default function Navbar() {
           <Link to="/cek-typo" className="nav-link">Cek Typo</Link>
           <Link to="/parafrase" className="nav-link">Parafrase</Link>
           <Link to="/terjemah" className="nav-link">Terjemah</Link>
-          <a href="#paket" className="nav-link">Paket</a>
+          <Link to="/paket" className={currentPath === '/paket' ? 'nav-link active' : 'nav-link'}>
+            Paket
+          </Link>
         </div>
 
         <div className="nav-right">
@@ -133,15 +162,61 @@ export default function Navbar() {
 
                   <div className="nav-user-menu-divider" />
 
-                  <Link
-                    className="nav-user-menu-item"
-                    to="/#paket"
-                    role="menuitem"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <FiCreditCard aria-hidden="true" />
-                    <span>Paket &amp; Langganan</span>
-                  </Link>
+                  <div className="nav-user-menu-history">
+                    <p className="nav-user-menu-history-title">
+                      <FiFileText aria-hidden="true" />
+                      Riwayat Transaksi
+                    </p>
+
+                    {transactionsLoading ? (
+                      <div className="nav-user-menu-history-list" aria-label="Memuat riwayat transaksi">
+                        {[0, 1].map((item) => (
+                          <div className="nav-user-menu-history-item" key={item}>
+                            <div className="nav-user-menu-history-info">
+                              <Skeleton className="nav-user-menu-history-skeleton-title" />
+                              <Skeleton className="nav-user-menu-history-skeleton-meta" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : recentTransactions.length === 0 ? (
+                      <p className="nav-user-menu-history-empty">Belum ada transaksi.</p>
+                    ) : (
+                      <div className="nav-user-menu-history-list">
+                        {recentTransactions.map((transaction) => {
+                          const status = transaction.status || 'expired';
+
+                          return (
+                            <div
+                              className="nav-user-menu-history-item"
+                              key={transaction.id || transaction.order_code}
+                            >
+                              <div className="nav-user-menu-history-info">
+                                <span className="nav-user-menu-history-name">
+                                  {transaction.package_name}
+                                </span>
+                                <span className="nav-user-menu-history-meta">
+                                  {formatDate(transaction.paid_at || transaction.created_at)}
+                                  {' · '}
+                                  {STATUS_LABELS[status] || status}
+                                </span>
+                              </div>
+                              <div className="nav-user-menu-history-amount">
+                                <span>{formatRupiah(transaction.total_amount)}</span>
+                                <span
+                                  className={`nav-user-menu-history-badge nav-user-menu-history-badge--${
+                                    STATUS_CLASS[status] || 'expired'
+                                  }`}
+                                >
+                                  {STATUS_LABELS[status] || status}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="nav-user-menu-divider" />
 

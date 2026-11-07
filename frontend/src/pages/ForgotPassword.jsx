@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiMail } from 'react-icons/fi';
 import AuthHeader from '../components/AuthHeader';
 import { requestPasswordReset } from '../services/authApi';
+import { useSubmit } from '../hooks/useSubmit';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESET_EMAIL_KEY = 'typoku_reset_email';
@@ -12,10 +13,11 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [serverError, setServerError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const { run: submitForgotPassword, loading: submitting } = useSubmit(requestPasswordReset);
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (submitting) return;
     const cleanEmail = email.trim();
 
     if (!cleanEmail) {
@@ -28,18 +30,15 @@ export default function ForgotPassword() {
       return;
     }
 
-    setSubmitting(true);
     setError('');
     setServerError('');
 
     try {
-      await requestPasswordReset(cleanEmail);
+      await submitForgotPassword(cleanEmail);
       sessionStorage.setItem(RESET_EMAIL_KEY, cleanEmail);
       navigate('/cek-email', { state: { email: cleanEmail } });
     } catch (requestError) {
       setServerError(requestError.message);
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -91,7 +90,12 @@ export default function ForgotPassword() {
           ) : null}
         </div>
 
-        <button className="auth-button auth-submit" type="submit" disabled={submitting}>
+        <button
+          className="auth-button auth-submit"
+          type="submit"
+          disabled={submitting}
+          aria-busy={submitting}
+        >
           {submitting ? 'Mengirim...' : 'Kirim Tautan Pemulihan'}
           {submitting ? null : <FiArrowRight aria-hidden="true" />}
         </button>

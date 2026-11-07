@@ -1,22 +1,30 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiAlertCircle, FiArrowRight, FiEye, FiEyeOff, FiLock, FiMail } from 'react-icons/fi';
 import AuthHeader from '../components/AuthHeader';
 import { useAuth } from '../context/AuthContext';
 import { getMyAccess } from '../services/authApi';
+import { useSubmit } from '../hooks/useSubmit';
 import { getToken } from '../services/session';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const token = getToken();
+  const redirectParam = searchParams.get('redirect') || '';
+  const redirectTo =
+    redirectParam.startsWith('/') && !redirectParam.startsWith('//') ? redirectParam : '/';
   const [form, setForm] = useState({ email: '', password: '', remember: true });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const { run: submitLogin, loading: submitting } = useSubmit(async ({ email, password }, remember) => {
+    await login({ email, password }, remember);
+    navigate(redirectTo, { replace: true });
+  });
 
   useEffect(() => {
     if (!token) {
@@ -61,6 +69,7 @@ export default function Login() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (submitting) return;
     const nextErrors = validate();
 
     if (Object.keys(nextErrors).length > 0) {
@@ -68,22 +77,18 @@ export default function Login() {
       return;
     }
 
-    setSubmitting(true);
     setServerError('');
 
     try {
-      await login(
+      await submitLogin(
         {
           email: form.email.trim(),
           password: form.password,
         },
         form.remember
       );
-      navigate('/', { replace: true });
     } catch (error) {
       setServerError(error.message);
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -184,7 +189,12 @@ export default function Login() {
           <span>Ingat saya di perangkat ini</span>
         </label>
 
-        <button className="auth-button auth-submit" type="submit" disabled={submitting}>
+        <button
+          className="auth-button auth-submit"
+          type="submit"
+          disabled={submitting}
+          aria-busy={submitting}
+        >
           {submitting ? 'Memproses...' : 'Masuk'}
           {submitting ? null : <FiArrowRight aria-hidden="true" />}
         </button>

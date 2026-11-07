@@ -80,6 +80,7 @@ export default function Register() {
   const strength = useMemo(() => getPasswordStrength(password), [password]);
 
   async function onSubmit(values) {
+    if (isSubmitting) return;
     setServerError('');
 
     try {
@@ -302,7 +303,12 @@ export default function Register() {
           {errors.terms ? <p className="auth-field-error">{errors.terms.message}</p> : null}
         </div>
 
-        <button className="auth-button auth-submit" type="submit" disabled={isSubmitting}>
+        <button
+          className="auth-button auth-submit"
+          type="submit"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting}
+        >
           {isSubmitting ? 'Memproses...' : 'Buat Akun Gratis'}
           {isSubmitting ? null : <FiArrowRight aria-hidden="true" />}
         </button>

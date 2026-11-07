@@ -1,8 +1,25 @@
 const db = require('../confiq/database');
-const { coreApi, verifyNotificationSignature, clientKey } = require('../utils/midtrans');
+const {
+  coreApi,
+  verifyNotificationSignature,
+  clientKey,
+  isProduction,
+} = require('../utils/midtrans');
 const { sendSuccess, sendError } = require('../utils/response');
 
 const RECONCILE_WINDOW_MINUTES = Number(process.env.PAYMENT_RECONCILE_MINUTES) || 60;
+
+function parseMidtransTime(value) {
+  if (!value) {
+    return new Date();
+  }
+
+  const normalized = String(value).trim().replace(' ', 'T');
+  const hasOffset = /(Z|[+-]\d{2}:?\d{2})$/i.test(normalized);
+  const parsed = new Date(hasOffset ? normalized : `${normalized}+07:00`);
+
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
 
 function isWithinReconcileWindow(expiredAt) {
   if (!expiredAt) return false;
@@ -21,19 +38,19 @@ async function syncOrderWithMidtrans(order) {
       await applyPaymentSettlement(order.id, midtransStatus);
       return {
         status: 'paid',
-        paid_at: midtransStatus.settlement_time || new Date(),
+        paid_at: parseMidtransTime(midtransStatus.settlement_time),
         midtransStatus,
       };
     }
 
     if (transStatus === 'expire') {
-      await db.query('UPDATE orders SET status = "expired" WHERE id = ? AND status != "paid"', [order.id]);
-      await db.query('UPDATE payment_transactions SET transaction_status = "expire" WHERE order_id = ?', [order.id]);
+      await db.query(`UPDATE orders SET status = 'expired' WHERE id = ? AND status != 'paid'`, [order.id]);
+      await db.query(`UPDATE payment_transactions SET transaction_status = 'expire' WHERE order_id = ?`, [order.id]);
       return { status: 'expired', midtransStatus };
     }
 
     if (['cancel', 'deny'].includes(transStatus)) {
-      await db.query('UPDATE orders SET status = "failed" WHERE id = ? AND status != "paid"', [order.id]);
+      await db.query(`UPDATE orders SET status = 'failed' WHERE id = ? AND status != 'paid'`, [order.id]);
       await db.query('UPDATE payment_transactions SET transaction_status = ? WHERE order_id = ?', [transStatus, order.id]);
       return { status: 'failed', midtransStatus };
     }
@@ -43,7 +60,7 @@ async function syncOrderWithMidtrans(order) {
     if (order.status === 'pending') {
       const isExpiredLocally = new Date(order.expired_at) <= new Date();
       if (isExpiredLocally) {
-        await db.query('UPDATE orders SET status = "expired" WHERE id = ? AND status != "paid"', [order.id]);
+        await db.query(`UPDATE orders SET status = 'expired' WHERE id = ? AND status != 'paid'`, [order.id]);
         return { status: 'expired', error };
       }
     }
@@ -76,12 +93,12 @@ async function applyPaymentSettlement(orderId, midtransData = {}) {
       return true;
     }
 
-    const settlementTime = midtransData.settlement_time || new Date();
-    const transactionTime = midtransData.transaction_time || new Date();
+    const settlementTime = parseMidtransTime(midtransData.settlement_time);
+    const transactionTime = parseMidtransTime(midtransData.transaction_time);
 
     // 1. Update status pesanan menjadi paid
     await connection.query(
-      'UPDATE orders SET status = "paid", paid_at = COALESCE(?, NOW()) WHERE id = ?',
+      `UPDATE orders SET status = 'paid', paid_at = COALESCE(?, NOW()) WHERE id = ?`,
       [settlementTime, order.id]
     );
 
@@ -132,7 +149,7 @@ async function applyPaymentSettlement(orderId, midtransData = {}) {
     } else {
       // Batalkan paket aktif sebelumnya agar paket baru langsung aktif dari sekarang
       await connection.query(
-        'UPDATE user_subscriptions SET status = "cancelled" WHERE user_id = ? AND status = "active"',
+        `UPDATE user_subscriptions SET status = 'cancelled' WHERE user_id = ? AND status = 'active'`,
         [order.user_id]
       );
 
@@ -226,7 +243,7 @@ async function handleMidtransNotification(req, res) {
         await applyPaymentSettlement(order.id, notification);
       } else if (fraudStatus === 'challenge') {
         await db.query(
-          'UPDATE payment_transactions SET transaction_status = "challenge", fraud_status = "challenge", last_notification_at = NOW() WHERE order_id = ?',
+          `UPDATE payment_transactions SET transaction_status = 'challenge', fraud_status = 'challenge', last_notification_at = NOW() WHERE order_id = ?`,
           [order.id]
         );
       }
@@ -234,7 +251,7 @@ async function handleMidtransNotification(req, res) {
       await applyPaymentSettlement(order.id, notification);
     } else if (['cancel', 'deny'].includes(transactionStatus)) {
       await db.query(
-        'UPDATE orders SET status = "failed" WHERE id = ? AND status != "paid"',
+        `UPDATE orders SET status = 'failed' WHERE id = ? AND status != 'paid'`,
         [order.id]
       );
       await db.query(
@@ -243,16 +260,16 @@ async function handleMidtransNotification(req, res) {
       );
     } else if (transactionStatus === 'expire') {
       await db.query(
-        'UPDATE orders SET status = "expired" WHERE id = ? AND status != "paid"',
+        `UPDATE orders SET status = 'expired' WHERE id = ? AND status != 'paid'`,
         [order.id]
       );
       await db.query(
-        'UPDATE payment_transactions SET transaction_status = "expire", last_notification_at = NOW() WHERE order_id = ?',
+        `UPDATE payment_transactions SET transaction_status = 'expire', last_notification_at = NOW() WHERE order_id = ?`,
         [order.id]
       );
     } else if (transactionStatus === 'pending') {
       await db.query(
-        'UPDATE payment_transactions SET transaction_status = "pending", last_notification_at = NOW() WHERE order_id = ?',
+        `UPDATE payment_transactions SET transaction_status = 'pending', last_notification_at = NOW() WHERE order_id = ?`,
         [order.id]
       );
     }
@@ -262,6 +279,22 @@ async function handleMidtransNotification(req, res) {
     console.error('handleMidtransNotification error:', error);
     return sendError(res, 'Gagal memproses notifikasi Midtrans', 500);
   }
+}
+
+function getPaymentConfig(req, res) {
+  const configuredFee = Number(process.env.ADMIN_FEE);
+  const adminFee =
+    Number.isFinite(configuredFee) && configuredFee >= 0 ? Math.round(configuredFee) : 700;
+  const methods = (process.env.PAYMENT_METHODS || 'qris,dana,ovo')
+    .split(',')
+    .map((method) => method.trim().toLowerCase())
+    .filter(Boolean);
+
+  return sendSuccess(res, 'Konfigurasi pembayaran berhasil diambil', {
+    admin_fee: adminFee,
+    payment_methods: methods,
+    midtrans_is_production: isProduction,
+  });
 }
 
 async function getPaymentStatus(req, res) {
@@ -282,8 +315,10 @@ async function getPaymentStatus(req, res) {
           o.status,
           o.expired_at,
           o.paid_at,
+          o.created_at,
           pt.snap_token,
           pt.payment_method,
+          pt.midtrans_transaction_id,
           pt.transaction_status as midtrans_status
        FROM orders o
        LEFT JOIN payment_transactions pt ON pt.order_id = o.id
@@ -316,15 +351,20 @@ async function getPaymentStatus(req, res) {
     return sendSuccess(res, 'Status pembayaran berhasil diperiksa', {
       order_code: order.order_code,
       status: order.status,
+      package_id: order.package_id,
       package_name: order.package_name,
       package_price: Number(order.package_price),
       admin_fee: Number(order.admin_fee),
       total_amount: Number(order.total_amount),
+      payment_method: order.payment_method,
+      midtrans_transaction_id: order.midtrans_transaction_id,
+      created_at: order.created_at,
       paid_at: order.paid_at,
       expired_at: order.expired_at,
       snap_token: isPending ? order.snap_token : null,
       can_reopen: isPending,
       client_key: clientKey,
+      midtrans_is_production: isProduction,
     });
   } catch (error) {
     console.error('getPaymentStatus error:', error);
@@ -335,6 +375,8 @@ async function getPaymentStatus(req, res) {
 module.exports = {
   applyPaymentSettlement,
   handleMidtransNotification,
+  getPaymentConfig,
+  parseMidtransTime,
   getPaymentStatus,
   syncOrderWithMidtrans,
   isWithinReconcileWindow,
