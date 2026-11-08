@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiAlertCircle, FiArrowLeft, FiArrowRight, FiMail } from 'react-icons/fi';
 import AuthHeader from '../components/AuthHeader';
-import { requestPasswordReset } from '../services/authApi';
-import { useSubmit } from '../hooks/useSubmit';
+import { useForgotPasswordMutation } from '../hooks/useAuthMutations';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESET_EMAIL_KEY = 'typoku_reset_email';
@@ -13,7 +12,8 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [serverError, setServerError] = useState('');
-  const { run: submitForgotPassword, loading: submitting } = useSubmit(requestPasswordReset);
+  const forgotPasswordMutation = useForgotPasswordMutation();
+  const submitting = forgotPasswordMutation.isPending;
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -34,7 +34,7 @@ export default function ForgotPassword() {
     setServerError('');
 
     try {
-      await submitForgotPassword(cleanEmail);
+      await forgotPasswordMutation.mutateAsync(cleanEmail);
       sessionStorage.setItem(RESET_EMAIL_KEY, cleanEmail);
       navigate('/cek-email', { state: { email: cleanEmail } });
     } catch (requestError) {

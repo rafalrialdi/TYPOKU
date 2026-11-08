@@ -8,8 +8,7 @@ import {
   FiRefreshCw,
 } from 'react-icons/fi';
 import AuthHeader from '../components/AuthHeader';
-import { requestPasswordReset } from '../services/authApi';
-import { useSubmit } from '../hooks/useSubmit';
+import { useForgotPasswordMutation } from '../hooks/useAuthMutations';
 
 const RESET_EMAIL_KEY = 'typoku_reset_email';
 
@@ -19,7 +18,8 @@ export default function CheckEmail() {
   const [email] = useState(
     () => location.state?.email || sessionStorage.getItem(RESET_EMAIL_KEY) || ''
   );
-  const { run: resendPasswordReset, loading: resending } = useSubmit(requestPasswordReset);
+  const forgotPasswordMutation = useForgotPasswordMutation();
+  const resending = forgotPasswordMutation.isPending;
   const [message, setMessage] = useState('');
   const [serverError, setServerError] = useState('');
 
@@ -34,7 +34,7 @@ export default function CheckEmail() {
     setServerError('');
 
     try {
-      await resendPasswordReset(email);
+      await forgotPasswordMutation.mutateAsync(email);
       setMessage('Tautan pemulihan telah dikirim ulang. Silakan periksa kotak masuk Anda.');
     } catch (error) {
       setServerError(error.message);
@@ -49,49 +49,49 @@ export default function CheckEmail() {
         subtitle="Kami telah mengirimkan tautan pemulihan kata sandi ke alamat email terdaftar Anda."
       />
 
+      <div className="auth-message-box">
+        <FiInfo aria-hidden="true" />
+        <p>
+          Email verifikasi dikirimkan ke <strong>{email || 'alamat email Anda'}</strong>. Klik tautan
+          di dalamnya untuk membuat kata sandi baru.
+        </p>
+      </div>
+
       {serverError ? (
-        <div className="auth-alert auth-alert--error auth-alert--spaced" role="alert">
+        <div className="auth-alert auth-alert--error" role="alert">
           <FiAlertCircle aria-hidden="true" />
           <span>{serverError}</span>
         </div>
       ) : null}
 
       {message ? (
-        <div className="auth-alert auth-alert--success auth-alert--spaced" role="status">
+        <div className="auth-alert auth-alert--success" role="status">
           <FiInfo aria-hidden="true" />
           <span>{message}</span>
         </div>
       ) : null}
 
-      {email ? (
-        <p className="auth-subtitle auth-email-target">
-          Tautan dikirim ke <strong>{email}</strong>
-        </p>
-      ) : null}
-
-      <div className="auth-note">
-        <FiInfo aria-hidden="true" />
-        <span>
-          Tautan pemulihan memiliki masa berlaku terbatas. Jika email tidak muncul dalam beberapa
-          menit, periksa folder spam atau promosi.
-        </span>
-      </div>
-
       <div className="auth-actions">
-        <a className="auth-button" href="mailto:">
-          Buka Aplikasi Email
-          <FiExternalLink aria-hidden="true" />
-        </a>
         <button
-          className="auth-button auth-button--secondary"
+          className="auth-button"
           type="button"
           onClick={handleResend}
-           disabled={resending}
-           aria-busy={resending}
-         >
+          disabled={resending}
+          aria-busy={resending}
+        >
           <FiRefreshCw aria-hidden="true" />
-          {resending ? 'Mengirim ulang...' : 'Kirim Ulang Tautan'}
+          {resending ? 'Mengirim Ulang...' : 'Kirim Ulang Email'}
         </button>
+
+        <a
+          className="auth-button auth-button--secondary"
+          href="https://mail.google.com"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Buka Gmail
+          <FiExternalLink aria-hidden="true" />
+        </a>
       </div>
 
       <hr className="auth-divider" />

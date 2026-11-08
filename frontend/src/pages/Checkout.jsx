@@ -1,25 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   FiAlertCircle,
   FiArrowLeft,
   FiArrowRight,
   FiCamera,
   FiCheck,
-  FiRefreshCw,
   FiShield,
 } from 'react-icons/fi';
 import Skeleton from '../components/Skeleton';
-import { useApiGet } from '../hooks/useApiGet';
+import QueryBoundary from '../components/QueryBoundary';
+import { usePackages } from '../hooks/usePackages';
+import { usePaymentConfig } from '../hooks/usePaymentConfig';
+import { useCreateOrder } from '../hooks/useOrderMutations';
 import { usePaymentPolling } from '../hooks/usePaymentPolling';
-import { useSubmit } from '../hooks/useSubmit';
-import {
-  createOrder,
-  getOrderByCode,
-  getPackages,
-  getPaymentConfig,
-  getPaymentStatus,
-} from '../services/paymentApi';
+import { getPaymentStatus } from '../services/paymentApi';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/queryKeys';
 import { hideSnap, loadSnap, openSnap } from '../utils/snap';
 import './checkout.css';
 
@@ -34,36 +32,63 @@ function formatRupiah(value) {
   return Number.isFinite(amount) ? rupiahFormatter.format(amount) : 'Rp 0';
 }
 
-function CheckoutSkeleton() {
+export function CheckoutSkeleton() {
   return (
-    <div className="checkout-container" role="status" aria-label="Memuat detail pembayaran">
-      <Skeleton className="checkout-skel-back" />
-      <Skeleton className="checkout-skel-title" />
-      <div className="checkout-grid">
-        <div className="checkout-left">
-          <div className="checkout-card">
-            <Skeleton className="checkout-skel-line" style={{ width: '40%' }} />
-            <Skeleton className="checkout-skel-method" />
+    <div className="checkout-page">
+      <div className="checkout-container" role="status" aria-label="Memuat detail pembayaran">
+        <Skeleton className="checkout-skel-back" />
+        <Skeleton className="checkout-skel-title" />
+        <div className="checkout-grid">
+          <div className="checkout-left">
+            <div className="checkout-card">
+              <Skeleton className="checkout-skel-line" style={{ width: '40%' }} />
+              <Skeleton className="checkout-skel-method" />
+            </div>
+            <div className="checkout-card">
+              <Skeleton className="checkout-skel-line" style={{ width: '55%' }} />
+              <Skeleton className="checkout-skel-line" style={{ width: '92%' }} />
+              <Skeleton className="checkout-skel-line" style={{ width: '80%' }} />
+            </div>
           </div>
-          <div className="checkout-card">
-            <Skeleton className="checkout-skel-line" style={{ width: '55%' }} />
-            <Skeleton className="checkout-skel-line" style={{ width: '92%' }} />
-            <Skeleton className="checkout-skel-line" style={{ width: '80%' }} />
-          </div>
+          <aside className="checkout-aside">
+            <div className="checkout-summary">
+              <Skeleton className="checkout-skel-line" style={{ width: '50%' }} />
+              <Skeleton className="checkout-skel-line" style={{ width: '75%' }} />
+              <Skeleton className="checkout-skel-block" />
+              <Skeleton className="checkout-skel-line" style={{ width: '90%' }} />
+              <Skeleton className="checkout-skel-line" style={{ width: '70%' }} />
+              <Skeleton className="checkout-skel-button" />
+            </div>
+          </aside>
         </div>
-        <aside className="checkout-aside">
-          <div className="checkout-summary">
-            <Skeleton className="checkout-skel-line" style={{ width: '50%' }} />
-            <Skeleton className="checkout-skel-line" style={{ width: '75%' }} />
-            <Skeleton className="checkout-skel-block" />
-            <Skeleton className="checkout-skel-line" style={{ width: '90%' }} />
-            <Skeleton className="checkout-skel-line" style={{ width: '70%' }} />
-            <Skeleton className="checkout-skel-button" />
-          </div>
-        </aside>
       </div>
     </div>
   );
+}
+
+function PendingOrderGate({ orderCode, onResolved, onInvalid }) {
+  const { data } = useSuspenseQuery({
+    queryKey: queryKeys.orderByCode(orderCode),
+    queryFn: () =>
+      api(`/api/orders/${encodeURIComponent(orderCode)}`, {
+        auth: true,
+      }),
+    select: (res) => res?.data,
+  });
+
+  useEffect(() => {
+    if (data?.can_reopen && data?.order?.status === 'pending') {
+      onResolved({
+        order_code: data.order.order_code,
+        snap_token: data.snap_token,
+        client_key: data.client_key,
+      });
+    } else {
+      onInvalid();
+    }
+  }, [data, onResolved, onInvalid]);
+
+  return null;
 }
 
 export default function Checkout() {
@@ -76,19 +101,29 @@ export default function Checkout() {
   const [paymentError, setPaymentError] = useState('');
   const [paying, setPaying] = useState(false);
 
-  const { data, error, loading, showSkeleton, reload } = useApiGet(async ({ signal }) => {
-    const [packagesResponse, configResponse] = await Promise.all([
-      getPackages({ signal }),
-      getPaymentConfig({ signal }),
-    ]);
+  const [storedOrderCode] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (!raw) return null;
+      const stored = JSON.parse(raw);
+      return stored?.orderCode || null;
+    } catch {
+      return null;
+    }
+  });
 
-    return {
-      packages: Array.isArray(packagesResponse?.data) ? packagesResponse.data : [],
-      config: configResponse?.data || {},
-    };
-  }, [packageId]);
+  const { data: packages } = usePackages();
+  const { data: config } = usePaymentConfig();
+  const createOrderMutation = useCreateOrder();
 
-  const { run: submitOrder, loading: creatingOrder } = useSubmit(createOrder);
+  const handlePendingResolved = useCallback((order) => {
+    setPendingOrder(order);
+  }, []);
+
+  const handlePendingInvalid = useCallback(() => {
+    sessionStorage.removeItem(storageKey);
+    setPendingOrder(null);
+  }, [storageKey]);
 
   const { start: startPolling, stop: stopPolling } = usePaymentPolling({
     fetchStatus: getPaymentStatus,
@@ -106,61 +141,14 @@ export default function Checkout() {
     navigate(path, { replace: true });
   }
 
-  useEffect(() => {
-    let active = true;
-    const raw = sessionStorage.getItem(storageKey);
-
-    if (!raw) {
-      return undefined;
-    }
-
-    let stored;
-    try {
-      stored = JSON.parse(raw);
-    } catch {
-      sessionStorage.removeItem(storageKey);
-      return undefined;
-    }
-
-    if (!stored?.orderCode) {
-      sessionStorage.removeItem(storageKey);
-      return undefined;
-    }
-
-    getOrderByCode(stored.orderCode)
-      .then((response) => {
-        if (!active) return;
-        const result = response?.data;
-
-        if (result?.can_reopen && result?.order?.status === 'pending') {
-          setPendingOrder({
-            order_code: result.order.order_code,
-            snap_token: result.snap_token,
-            client_key: result.client_key,
-          });
-        } else {
-          sessionStorage.removeItem(storageKey);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          sessionStorage.removeItem(storageKey);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [storageKey]);
-
-  const pkg = data?.packages?.find((item) => String(item.id) === String(packageId));
-  const adminFee = Number(data?.config?.admin_fee);
+  const pkg = packages?.find((item) => String(item.id) === String(packageId));
+  const adminFee = Number(config?.admin_fee);
   const resolvedAdminFee = Number.isFinite(adminFee) ? adminFee : 700;
   const packagePrice = Number(pkg?.price) || 0;
   const totalAmount = packagePrice + resolvedAdminFee;
   const features = Array.isArray(pkg?.features) ? pkg.features : [];
-  const midtransIsProduction = Boolean(data?.config?.midtrans_is_production);
-  const busy = creatingOrder || paying;
+  const midtransIsProduction = Boolean(config?.midtrans_is_production);
+  const busy = createOrderMutation.isPending || paying;
 
   async function handlePay() {
     if (!pkg || busy || payingRef.current) return;
@@ -173,7 +161,10 @@ export default function Checkout() {
       let order = pendingOrder;
 
       if (!order) {
-        const response = await submitOrder({ packageId: pkg.id, paymentMethod: 'qris' });
+        const response = await createOrderMutation.mutateAsync({
+          packageId: pkg.id,
+          paymentMethod: 'qris',
+        });
         const result = response?.data;
 
         if (!result?.snap_token || !result?.client_key) {
@@ -217,37 +208,6 @@ export default function Checkout() {
     }
   }
 
-  if (loading || showSkeleton) {
-    return (
-      <div className="checkout-page">
-        <CheckoutSkeleton />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="checkout-page">
-        <div className="checkout-container">
-          <div className="checkout-state" role="alert">
-            <p className="checkout-state-title">Gagal memuat detail pembayaran.</p>
-            <p className="checkout-state-text">
-              {error?.message || 'Periksa koneksi Anda lalu coba lagi.'}
-            </p>
-            <button
-              className="checkout-pay-button checkout-state-button"
-              type="button"
-              onClick={reload}
-            >
-              <FiRefreshCw aria-hidden="true" />
-              Coba Lagi
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (!pkg) {
     return (
       <div className="checkout-page">
@@ -268,6 +228,16 @@ export default function Checkout() {
 
   return (
     <div className="checkout-page">
+      {storedOrderCode ? (
+        <QueryBoundary fallback={null} errorFallback={null} onReset={handlePendingInvalid}>
+          <PendingOrderGate
+            orderCode={storedOrderCode}
+            onResolved={handlePendingResolved}
+            onInvalid={handlePendingInvalid}
+          />
+        </QueryBoundary>
+      ) : null}
+
       <div className="checkout-container">
         <div className="checkout-topbar">
           <div>
@@ -328,10 +298,7 @@ export default function Checkout() {
             </div>
 
             <div className="checkout-card checkout-card--refund">
-              <h3>
-                <FiShield aria-hidden="true" />
-                Kebijakan Pengembalian Dana (Refund)
-              </h3>
+              <h3>Kebijakan Pengembalian Dana (Refund)</h3>
               <p>
                 Pengembalian dana dapat diajukan maksimal 7 hari setelah pesanan diterima apabila
                 produk rusak atau tidak sesuai pesanan. Kirim email ke rafalrialdi71@gmail.com
@@ -389,7 +356,7 @@ export default function Checkout() {
                 disabled={busy}
                 aria-busy={busy}
               >
-                {creatingOrder
+                {createOrderMutation.isPending
                   ? 'Membuat pesanan...'
                   : paying
                     ? 'Menunggu pembayaran...'

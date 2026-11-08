@@ -7,49 +7,11 @@ import {
   FiLogOut,
   FiUser,
 } from 'react-icons/fi';
-import Skeleton from './Skeleton';
+import QueryBoundary from './QueryBoundary';
+import TransactionHistory, { TransactionHistorySkeleton } from './TransactionHistory';
 import { useAuth } from '../context/AuthContext';
 import { isAuthenticated } from '../services/session';
 import './components.css';
-
-const STATUS_LABELS = {
-  pending: 'Menunggu',
-  paid: 'Lunas',
-  expired: 'Waktu Habis',
-  failed: 'Gagal',
-  cancelled: 'Dibatalkan',
-};
-
-const STATUS_CLASS = {
-  pending: 'pending',
-  paid: 'paid',
-  expired: 'expired',
-  failed: 'failed',
-  cancelled: 'failed',
-};
-
-const dateFormatter = new Intl.DateTimeFormat('id-ID', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-});
-
-const rupiahFormatter = new Intl.NumberFormat('id-ID', {
-  style: 'currency',
-  currency: 'IDR',
-  maximumFractionDigits: 0,
-});
-
-function formatDate(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '' : dateFormatter.format(date);
-}
-
-function formatRupiah(value) {
-  const amount = Number(value);
-  return Number.isFinite(amount) ? rupiahFormatter.format(amount) : 'Rp 0';
-}
 
 function getInitials(user) {
   const source = user?.name?.trim() || user?.email?.trim() || '?';
@@ -67,11 +29,10 @@ export default function Navbar() {
   const navigate = useNavigate();
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
-  const { user, logout, transactions, transactionsLoading } = useAuth();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const currentPath = location.pathname;
   const authenticated = Boolean(user) && isAuthenticated();
-  const recentTransactions = transactions.slice(0, 3);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -119,7 +80,7 @@ export default function Navbar() {
       <div className="nav-inner">
         <Link to="/" className="nav-brand">
           <span className="nav-brand-badge" aria-hidden="true">T</span>
-          <span>TypoKu</span>
+          <span className="nav-brand-name">TypoKu</span>
         </Link>
 
         <div className="nav-center">
@@ -168,54 +129,16 @@ export default function Navbar() {
                       Riwayat Transaksi
                     </p>
 
-                    {transactionsLoading ? (
-                      <div className="nav-user-menu-history-list" aria-label="Memuat riwayat transaksi">
-                        {[0, 1].map((item) => (
-                          <div className="nav-user-menu-history-item" key={item}>
-                            <div className="nav-user-menu-history-info">
-                              <Skeleton className="nav-user-menu-history-skeleton-title" />
-                              <Skeleton className="nav-user-menu-history-skeleton-meta" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : recentTransactions.length === 0 ? (
-                      <p className="nav-user-menu-history-empty">Belum ada transaksi.</p>
-                    ) : (
-                      <div className="nav-user-menu-history-list">
-                        {recentTransactions.map((transaction) => {
-                          const status = transaction.status || 'expired';
-
-                          return (
-                            <div
-                              className="nav-user-menu-history-item"
-                              key={transaction.id || transaction.order_code}
-                            >
-                              <div className="nav-user-menu-history-info">
-                                <span className="nav-user-menu-history-name">
-                                  {transaction.package_name}
-                                </span>
-                                <span className="nav-user-menu-history-meta">
-                                  {formatDate(transaction.paid_at || transaction.created_at)}
-                                  {' · '}
-                                  {STATUS_LABELS[status] || status}
-                                </span>
-                              </div>
-                              <div className="nav-user-menu-history-amount">
-                                <span>{formatRupiah(transaction.total_amount)}</span>
-                                <span
-                                  className={`nav-user-menu-history-badge nav-user-menu-history-badge--${
-                                    STATUS_CLASS[status] || 'expired'
-                                  }`}
-                                >
-                                  {STATUS_LABELS[status] || status}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    <QueryBoundary
+                      fallback={<TransactionHistorySkeleton />}
+                      errorFallback={
+                        <p className="nav-user-menu-history-empty">
+                          Gagal memuat riwayat.
+                        </p>
+                      }
+                    >
+                      <TransactionHistory />
+                    </QueryBoundary>
                   </div>
 
                   <div className="nav-user-menu-divider" />

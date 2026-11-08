@@ -9,14 +9,15 @@ import {
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthLayout from './layouts/AuthLayout';
 import MainLayout from './layouts/MainLayout';
+import QueryBoundary from './components/QueryBoundary';
 import CheckEmail from './pages/CheckEmail';
-import Checkout from './pages/Checkout';
+import Checkout, { CheckoutSkeleton } from './pages/Checkout';
 import ForgotPassword from './pages/ForgotPassword';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Paket from './pages/Paket';
-import PembayaranExpired from './pages/PembayaranExpired';
-import PembayaranLunas from './pages/PembayaranLunas';
+import Paket, { PaketSkeleton } from './pages/Paket';
+import PembayaranExpired, { ExpiredSkeleton } from './pages/PembayaranExpired';
+import PembayaranLunas, { PaymentSkeleton } from './pages/PembayaranLunas';
 import Register from './pages/Register';
 import ResetPassword from './pages/ResetPassword';
 
@@ -84,12 +85,21 @@ export default function App() {
 
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
-            <Route path="/paket" element={<Paket />} />
+            <Route
+              path="/paket"
+              element={
+                <QueryBoundary fallback={<PaketSkeleton />}>
+                  <Paket />
+                </QueryBoundary>
+              }
+            />
             <Route
               path="/checkout/:packageId"
               element={
                 <RequireAuth>
-                  <Checkout />
+                  <QueryBoundary fallback={<CheckoutSkeleton />}>
+                    <Checkout />
+                  </QueryBoundary>
                 </RequireAuth>
               }
             />
@@ -97,7 +107,9 @@ export default function App() {
               path="/pembayaran/lunas/:orderCode"
               element={
                 <RequireAuth>
-                  <PembayaranLunas />
+                  <QueryBoundary fallback={<PaymentSkeleton />}>
+                    <PembayaranLunas />
+                  </QueryBoundary>
                 </RequireAuth>
               }
             />
@@ -105,7 +117,9 @@ export default function App() {
               path="/pembayaran/expired/:orderCode"
               element={
                 <RequireAuth>
-                  <PembayaranExpired />
+                  <QueryBoundary fallback={<ExpiredSkeleton />}>
+                    <PembayaranExpired />
+                  </QueryBoundary>
                 </RequireAuth>
               }
             />

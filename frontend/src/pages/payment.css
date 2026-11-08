@@ -480,3 +480,274 @@
     display: none;
   }
 }
+
+@media (min-width: 768px) {
+  .payment-page {
+    --navbar-height: 64px;
+    display: flex;
+    align-items: center;
+    min-height: calc(100vh - var(--navbar-height));
+    min-height: calc(100dvh - var(--navbar-height));
+    min-height: calc(100svh - var(--navbar-height));
+    padding-block: clamp(0.75rem, 2.5vh, 2rem);
+  }
+
+  .payment-container--wide {
+    max-width: 34rem;
+  }
+
+  .payment-card {
+    padding: clamp(0.9rem, 2.4vh, 1.75rem);
+  }
+
+  .payment-badge--inline {
+    margin-bottom: clamp(0.35rem, 1.2vh, 0.75rem);
+  }
+
+  .payment-title {
+    margin-top: 0.125rem;
+    font-size: clamp(1.25rem, 1.1vw + 0.7vh, 1.75rem);
+  }
+
+  .payment-text {
+    margin-top: clamp(0.25rem, 1vh, 0.5rem);
+    line-height: 1.55;
+  }
+
+  .payment-state-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+  }
+
+  .payment-note {
+    margin-top: 0.5rem;
+  }
+
+  .payment-alert {
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.875rem;
+  }
+
+  .payment-steps {
+    margin-top: clamp(0.6rem, 1.8vh, 1.25rem);
+    padding: clamp(0.6rem, 1.8vh, 1rem);
+    gap: clamp(0.35rem, 1vh, 0.625rem);
+  }
+
+  .payment-step {
+    gap: 0.6rem;
+    padding: clamp(0.35rem, 1vh, 0.625rem) 0.75rem;
+  }
+
+  .payment-step-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .payment-summary {
+    margin-top: clamp(0.6rem, 1.8vh, 1.25rem);
+    padding: clamp(0.6rem, 1.8vh, 1rem);
+  }
+
+  .payment-summary-head {
+    padding-bottom: clamp(0.4rem, 1.2vh, 0.75rem);
+  }
+
+  .payment-summary-list {
+    gap: clamp(0.25rem, 1vh, 0.5rem);
+    margin-top: clamp(0.4rem, 1.2vh, 0.75rem);
+  }
+
+  .payment-copy-hint {
+    min-height: 0;
+    margin-top: 0.25rem;
+  }
+
+  .payment-actions {
+    gap: 0.5rem;
+    margin-top: clamp(0.6rem, 1.8vh, 1.25rem);
+  }
+
+  .payment-button {
+    min-height: clamp(2.4rem, 5.5vh, 2.75rem);
+  }
+
+  .payment-help {
+    margin-top: clamp(0.5rem, 1.5vh, 1rem);
+  }
+
+  .payment-card--paid {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.payment-page--expired .payment-card--expired {
+  align-items: stretch;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  border-radius: 0.75rem;
+}
+
+.payment-page--expired .payment-title {
+  margin-top: 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+}
+
+.payment-page--expired .payment-text {
+  max-width: 32rem;
+  margin: 0.5rem auto 0;
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.payment-expired-summary {
+  display: grid;
+  gap: 0.625rem;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.625rem;
+  background-color: #f8fafc;
+}
+
+.payment-expired-summary > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #9ca3af;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+
+.payment-expired-summary dd {
+  margin: 0;
+  color: #111827;
+  font-weight: 600;
+  text-align: right;
+}
+
+.payment-expired-status {
+  color: #d97706 !important;
+  text-transform: lowercase;
+}
+
+.payment-page--expired .payment-button {
+  margin-top: 1rem;
+}
+
+.payment-expired-home {
+  align-self: center;
+  margin-top: 0.75rem;
+  color: #111827;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-decoration: none;
+}
+
+.payment-expired-home:hover {
+  color: #4f46e5;
+}
+
+.payment-page--expired .payment-help--box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  margin-top: 1.25rem;
+  padding: 0.75rem;
+  border: 1px solid #eef2f7;
+  border-radius: 0.375rem;
+  background-color: #ffffff;
+  color: #9ca3af;
+  font-size: 0.625rem;
+  line-height: 1.55;
+  text-align: left;
+}
+
+.payment-help--box svg {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+  color: #4f46e5;
+}
+
+@media (min-width: 768px) {
+  .payment-page--paid {
+    align-items: flex-start;
+    padding-top: clamp(2rem, 5vh, 3.5rem);
+  }
+
+  .payment-container--wide {
+    max-width: 30rem;
+    padding-inline: 0;
+  }
+
+  .payment-card--paid {
+    min-height: 0;
+    padding: clamp(2rem, 5vh, 3.5rem) clamp(1.5rem, 3vw, 2.25rem);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .payment-card--paid .payment-steps,
+  .payment-card--paid .payment-summary {
+    margin-top: clamp(1.25rem, 3vh, 2rem);
+  }
+
+  .payment-card--paid .payment-actions {
+    margin-top: clamp(1.25rem, 3vh, 2rem);
+  }
+
+  .payment-container--expired {
+    max-width: 38rem;
+  }
+}
+
+@media (min-width: 768px) and (max-height: 720px) {
+  .payment-page {
+    padding-block: 0.5rem;
+  }
+
+  .payment-card {
+    padding: 0.75rem 0.9rem;
+  }
+
+  .payment-title {
+    font-size: 1.2rem;
+  }
+
+  .payment-text {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  .payment-steps {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    gap: 0.25rem;
+  }
+
+  .payment-step {
+    padding: 0.3rem 0.5rem;
+  }
+
+  .payment-summary {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .payment-summary-list {
+    gap: 0.2rem;
+    margin-top: 0.3rem;
+  }
+
+  .payment-actions {
+    margin-top: 0.5rem;
+  }
+
+  .payment-help {
+    margin-top: 0.4rem;
+  }
+}

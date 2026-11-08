@@ -5,7 +5,8 @@ const API_BASE_URL = (import.meta.env?.VITE_API_BASE_URL || 'http://localhost:80
 
 import { clearSession, getToken } from './session';
 
-async function request(path, { method = 'GET', body, auth = false, headers, signal } = {}) {
+async function request(path, { method = 'GET', body, auth = false, headers, signal, cache } = {}) {
+  const isGet = method === 'GET';
   const token = getToken();
   const finalHeaders = { ...(headers || {}) };
 
@@ -23,8 +24,13 @@ async function request(path, { method = 'GET', body, auth = false, headers, sign
     method,
     headers: finalHeaders,
     signal,
+    cache: cache || (isGet ? 'no-cache' : undefined),
     ...(body !== undefined ? { body: body instanceof FormData ? body : JSON.stringify(body) } : {}),
   });
+
+  if (response.status === 204) {
+    return null;
+  }
 
   let data = null;
   try {

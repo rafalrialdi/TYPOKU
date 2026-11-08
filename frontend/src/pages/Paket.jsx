@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom';
-import { FiArrowRight, FiCheckCircle, FiRefreshCw } from 'react-icons/fi';
+import { FiCheckCircle } from 'react-icons/fi';
 import Skeleton from '../components/Skeleton';
-import { useApiGet } from '../hooks/useApiGet';
-import { getPackages } from '../services/paymentApi';
+import { usePackages } from '../hooks/usePackages';
 import './paket.css';
 
 const EYEBROW_BY_CODE = {
@@ -37,59 +36,51 @@ function SectionGlow() {
   );
 }
 
-function PaketSkeleton() {
+export function PaketSkeleton() {
   return (
-    <div className="paket-grid" role="status" aria-label="Memuat daftar paket">
-      {[0, 1, 2].map((item) => (
-        <div className="paket-card paket-card--skeleton" key={item}>
-          <div>
-            <Skeleton className="paket-skel-eyebrow" />
-            <Skeleton className="paket-skel-title" />
-            <Skeleton className="paket-skel-desc" />
-            <Skeleton className="paket-skel-price" />
-            <div className="paket-skel-divider" />
-            <Skeleton className="paket-skel-subtitle" />
-            <div className="paket-skel-list">
-              <Skeleton className="paket-skel-feature" />
-              <Skeleton className="paket-skel-feature" />
-              <Skeleton className="paket-skel-feature" />
+    <div className="paket-page paket-page--compact">
+      <SectionGlow />
+      <div className="paket-container">
+        <h1 className="paket-heading">
+          Pilihan Paket yang Fleksibel untuk Setiap Tahap Akademik Anda
+        </h1>
+        <div className="paket-grid" role="status" aria-label="Memuat daftar paket">
+          {[0, 1, 2].map((item) => (
+            <div className="paket-card paket-card--skeleton" key={item}>
+              <div>
+                <Skeleton className="paket-skel-eyebrow" />
+                <Skeleton className="paket-skel-title" />
+                <Skeleton className="paket-skel-desc" />
+                <Skeleton className="paket-skel-price" />
+                <div className="paket-skel-divider" />
+                <Skeleton className="paket-skel-subtitle" />
+                <div className="paket-skel-list">
+                  <Skeleton className="paket-skel-feature" />
+                  <Skeleton className="paket-skel-feature" />
+                  <Skeleton className="paket-skel-feature" />
+                </div>
+              </div>
+              <Skeleton className="paket-skel-button" />
             </div>
-          </div>
-          <Skeleton className="paket-skel-button" />
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
 
 export default function Paket() {
-  const { data: packages, error, loading, showSkeleton, reload } = useApiGet(
-    ({ signal }) => getPackages({ signal }),
-    []
-  );
+  const { data: packages } = usePackages();
 
   return (
-    <div className="paket-page">
+    <div className="paket-page paket-page--compact">
       <SectionGlow />
       <div className="paket-container">
         <h1 className="paket-heading">
           Pilihan Paket yang Fleksibel untuk Setiap Tahap Akademik Anda
         </h1>
 
-        {loading || showSkeleton ? (
-          <PaketSkeleton />
-        ) : error ? (
-          <div className="paket-state" role="alert">
-            <p className="paket-state-title">Gagal memuat daftar paket.</p>
-            <p className="paket-state-text">
-              {error?.message || 'Periksa koneksi Anda lalu coba lagi.'}
-            </p>
-            <button className="paket-button paket-button--primary paket-state-button" type="button" onClick={reload}>
-              <FiRefreshCw aria-hidden="true" />
-              Coba Lagi
-            </button>
-          </div>
-        ) : packages?.length ? (
+        {packages?.length ? (
           <div className="paket-grid">
             {packages.map((pkg) => {
               const featured = Boolean(pkg.is_recommended);
@@ -122,12 +113,22 @@ export default function Paket() {
                       <span className="paket-card-period">{pkg.billing_label}</span>
                     </div>
 
+                    {featured ? (
+                      <p className="paket-card-billing-note">
+                        Ditagihkan tahunan Rp 468.000/tahun (Hemat 25%)
+                      </p>
+                    ) : null}
+
                     <div
                       className={`paket-card-divider${featured ? ' paket-card-divider--primary' : ''}`}
                     />
 
                     <p className="paket-card-subtitle">
-                      {featured ? 'Semua Fitur Gratis, Ditambah:' : 'Fasilitas Termasuk:'}
+                      {featured
+                        ? 'Semua Fitur Gratis, Ditambah:'
+                        : code === 'PRO_PLUS'
+                          ? 'Semua Fitur Pro, Ditambah:'
+                          : 'Fasilitas Termasuk:'}
                     </p>
 
                     <ul className="paket-card-features">
@@ -146,7 +147,6 @@ export default function Paket() {
                       to={`/checkout/${pkg.id}`}
                     >
                       {ACTION_BY_CODE[code] || 'Pilih Paket'}
-                      <FiArrowRight aria-hidden="true" />
                     </Link>
                   </div>
                 </article>
@@ -159,7 +159,6 @@ export default function Paket() {
             <p className="paket-state-text">Silakan kembali lagi nanti.</p>
           </div>
         )}
-
       </div>
     </div>
   );

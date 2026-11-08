@@ -213,17 +213,30 @@ async function getMyOrders(req, res) {
           o.admin_fee,
           o.duration_days,
           o.total_amount,
-          o.status,
-          o.expired_at,
-          o.paid_at,
-          o.created_at,
-          pt.snap_token,
-          pt.payment_method,
-          pt.transaction_status as midtrans_status
-       FROM orders o
-       LEFT JOIN payment_transactions pt ON pt.order_id = o.id
-       WHERE o.user_id = ?
-       ORDER BY o.created_at DESC`,
+           o.status,
+           o.expired_at,
+           CASE
+             WHEN o.status = 'paid' THEN COALESCE(
+               us.expired_at,
+               DATE_ADD(
+                 COALESCE(us.started_at, o.created_at),
+                 INTERVAL COALESCE(us.duration_days, p.duration_days, o.duration_days) DAY
+               )
+             )
+             ELSE o.expired_at
+           END AS display_expired_at,
+           us.expired_at AS subscription_expired_at,
+           o.paid_at,
+           o.created_at,
+           pt.snap_token,
+           pt.payment_method,
+           pt.transaction_status as midtrans_status
+        FROM orders o
+        LEFT JOIN packages p ON p.id = o.package_id
+        LEFT JOIN user_subscriptions us ON us.order_id = o.id
+        LEFT JOIN payment_transactions pt ON pt.order_id = o.id
+        WHERE o.user_id = ?
+        ORDER BY o.created_at DESC`,
       [userId]
     );
 

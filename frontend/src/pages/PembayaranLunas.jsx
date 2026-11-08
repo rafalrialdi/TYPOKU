@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   FiAlertCircle,
   FiArrowRight,
@@ -7,13 +8,13 @@ import {
   FiCheckCircle,
   FiClock,
   FiCopy,
-  FiHome,
   FiRefreshCw,
 } from 'react-icons/fi';
 import Skeleton from '../components/Skeleton';
-import { useApiGet } from '../hooks/useApiGet';
+import { usePaymentStatus } from '../hooks/usePaymentStatus';
 import { usePaymentPolling } from '../hooks/usePaymentPolling';
-import { getPaymentStatus } from '../services/paymentApi';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/queryKeys';
 import { loadSnap, openSnap } from '../utils/snap';
 import './payment.css';
 
@@ -43,22 +44,24 @@ function formatDateTime(value) {
   return `${dateFormatter.format(date)} WIB`;
 }
 
-function PaymentSkeleton() {
+export function PaymentSkeleton() {
   return (
-    <div className="payment-container" role="status" aria-label="Memuat status pembayaran">
-      <div className="payment-card">
-        <Skeleton className="payment-skel-badge" />
-        <Skeleton className="payment-skel-title" />
-        <Skeleton className="payment-skel-text" />
-        <Skeleton className="payment-skel-block" />
-        <Skeleton className="payment-skel-block" />
-        <Skeleton className="payment-skel-button" />
+    <div className="payment-page">
+      <div className="payment-container" role="status" aria-label="Memuat status pembayaran">
+        <div className="payment-card">
+          <Skeleton className="payment-skel-badge" />
+          <Skeleton className="payment-skel-title" />
+          <Skeleton className="payment-skel-text" />
+          <Skeleton className="payment-skel-block" />
+          <Skeleton className="payment-skel-block" />
+          <Skeleton className="payment-skel-button" />
+        </div>
       </div>
     </div>
   );
 }
 
-function OrderSummary({ order, statusLabel, statusClass, onCopy, copied }) {
+function OrderSummary({ order, statusLabel, statusClass, onCopy, copied, compact = false }) {
   return (
     <div className="payment-summary">
       <div className="payment-summary-head">
@@ -90,16 +93,20 @@ function OrderSummary({ order, statusLabel, statusClass, onCopy, copied }) {
             </button>
           </dd>
         </div>
-        <div>
-          <dt>Paket</dt>
-          <dd>
-            {order.package_name} ({formatRupiah(order.package_price)})
-          </dd>
-        </div>
-        <div>
-          <dt>Biaya Admin</dt>
-          <dd>{formatRupiah(order.admin_fee)}</dd>
-        </div>
+        {!compact ? (
+          <>
+            <div>
+              <dt>Paket</dt>
+              <dd>
+                {order.package_name} ({formatRupiah(order.package_price)})
+              </dd>
+            </div>
+            <div>
+              <dt>Biaya Admin</dt>
+              <dd>{formatRupiah(order.admin_fee)}</dd>
+            </div>
+          </>
+        ) : null}
         {order.paid_at ? (
           <div>
             <dt>Waktu Pembayaran</dt>
@@ -129,10 +136,8 @@ function OrderSummary({ order, statusLabel, statusClass, onCopy, copied }) {
 export default function PembayaranLunas() {
   const { orderCode } = useParams();
   const navigate = useNavigate();
-  const { data: order, error, loading, showSkeleton, reload } = useApiGet(
-    () => getPaymentStatus(orderCode),
-    [orderCode]
-  );
+  const queryClient = useQueryClient();
+  const { data: order } = usePaymentStatus(orderCode);
 
   const [copied, setCopied] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -141,9 +146,31 @@ export default function PembayaranLunas() {
   const copyTimerRef = useRef(null);
   const payingRef = useRef(false);
 
+  const fetchStatusForPolling = useCallback(
+    async (code) => {
+      const response = await api(`/api/payments/status/${encodeURIComponent(code)}`, {
+        auth: true,
+      });
+      if (response?.data) {
+        queryClient.setQueryData(queryKeys.paymentStatus(code), response);
+      }
+      return response;
+    },
+    [queryClient]
+  );
+
+  const handlePaid = useCallback(
+    (status) => {
+      queryClient.setQueryData(queryKeys.paymentStatus(orderCode), { data: status });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myOrders });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myAccess });
+    },
+    [queryClient, orderCode]
+  );
+
   const { start, stop } = usePaymentPolling({
-    fetchStatus: getPaymentStatus,
-    onPaid: () => reload(),
+    fetchStatus: fetchStatusForPolling,
+    onPaid: handlePaid,
     onExpired: () => navigate(`/pembayaran/expired/${orderCode}`, { replace: true }),
     onFailed: () => navigate(`/pembayaran/expired/${orderCode}`, { replace: true }),
   });
@@ -197,7 +224,7 @@ export default function PembayaranLunas() {
   function handleCheckStatus() {
     setPollingStopped(false);
     start(orderCode);
-    reload();
+    queryClient.invalidateQueries({ queryKey: queryKeys.paymentStatus(orderCode) });
   }
 
   async function handleResumePayment() {
@@ -213,7 +240,9 @@ export default function PembayaranLunas() {
 
       openSnap(order.snap_token, {
         onSuccess: () => {
-          reload();
+          queryClient.invalidateQueries({ queryKey: queryKeys.paymentStatus(orderCode) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.myOrders });
+          queryClient.invalidateQueries({ queryKey: queryKeys.myAccess });
         },
         onPending: () => {},
         onError: () => {
@@ -231,45 +260,6 @@ export default function PembayaranLunas() {
       setPaying(false);
       setPayError(resumeError?.message || 'Gagal membuka jendela pembayaran.');
     }
-  }
-
-  if (loading || showSkeleton) {
-    return (
-      <div className="payment-page">
-        <PaymentSkeleton />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="payment-page">
-        <div className="payment-container">
-          <div className="payment-card payment-card--state" role="alert">
-            <span className="payment-state-icon payment-state-icon--danger" aria-hidden="true">
-              <FiAlertCircle />
-            </span>
-            <h1 className="payment-title">
-              {error?.status === 404 ? 'Pesanan tidak ditemukan.' : 'Gagal memuat status pembayaran.'}
-            </h1>
-            <p className="payment-text">
-              {error?.status === 404
-                ? 'Pastikan tautan pembayaran yang Anda buka sudah benar.'
-                : error?.message || 'Periksa koneksi Anda lalu coba lagi.'}
-            </p>
-            <div className="payment-actions">
-              <button className="payment-button" type="button" onClick={reload}>
-                <FiRefreshCw aria-hidden="true" />
-                Coba Lagi
-              </button>
-              <Link className="payment-button payment-button--ghost" to="/paket">
-                Lihat Paket
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   if (status === 'expired' || status === 'failed' || status === 'cancelled') {
@@ -331,7 +321,6 @@ export default function PembayaranLunas() {
                 className="payment-button"
                 type="button"
                 onClick={handleCheckStatus}
-                disabled={showSkeleton}
               >
                 <FiRefreshCw aria-hidden="true" />
                 Cek Status Sekarang
@@ -360,9 +349,9 @@ export default function PembayaranLunas() {
   }
 
   return (
-    <div className="payment-page">
-      <div className="payment-container">
-        <div className="payment-card">
+    <div className="payment-page payment-page--paid">
+      <div className="payment-container payment-container--wide">
+        <div className="payment-card payment-card--paid">
           <span className="payment-badge payment-badge--success payment-badge--inline">
             <FiCheckCircle aria-hidden="true" />
             Status: Pembayaran Berhasil Masuk
@@ -399,17 +388,6 @@ export default function PembayaranLunas() {
               </div>
               <span className="payment-step-state">{formatDateTime(order.paid_at)}</span>
             </div>
-
-            <div className="payment-step">
-              <span className="payment-step-icon" aria-hidden="true">
-                <FiCheck />
-              </span>
-              <div>
-                <p className="payment-step-title">Aktivasi Paket</p>
-                <p className="payment-step-text">Lisensi {order.package_name} aktif</p>
-              </div>
-              <span className="payment-step-state">Aktif</span>
-            </div>
           </div>
 
           <OrderSummary
@@ -418,16 +396,13 @@ export default function PembayaranLunas() {
             statusClass="payment-badge--success"
             onCopy={handleCopy}
             copied={copied}
+            compact
           />
 
-          <div className="payment-actions">
+          <div className="payment-actions payment-actions--single">
             <Link className="payment-button" to="/">
-              Mulai TypoKu
+              Mulai Typoku
               <FiArrowRight aria-hidden="true" />
-            </Link>
-            <Link className="payment-button payment-button--ghost" to="/paket">
-              <FiHome aria-hidden="true" />
-              Kembali ke Paket
             </Link>
           </div>
         </div>

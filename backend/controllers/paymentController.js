@@ -308,10 +308,11 @@ async function getPaymentStatus(req, res) {
           o.order_code,
           o.user_id,
           o.package_id,
-          o.package_name,
-          o.package_price,
-          o.admin_fee,
-          o.total_amount,
+           o.package_name,
+           o.package_price,
+           COALESCE(o.duration_days, p.duration_days) AS duration_days,
+           o.admin_fee,
+           o.total_amount,
           o.status,
           o.expired_at,
           o.paid_at,
@@ -320,8 +321,9 @@ async function getPaymentStatus(req, res) {
           pt.payment_method,
           pt.midtrans_transaction_id,
           pt.transaction_status as midtrans_status
-       FROM orders o
-       LEFT JOIN payment_transactions pt ON pt.order_id = o.id
+        FROM orders o
+        LEFT JOIN packages p ON p.id = o.package_id
+        LEFT JOIN payment_transactions pt ON pt.order_id = o.id
        WHERE o.order_code = ? AND o.user_id = ?
        LIMIT 1`,
       [orderCode, userId]
@@ -353,8 +355,9 @@ async function getPaymentStatus(req, res) {
       status: order.status,
       package_id: order.package_id,
       package_name: order.package_name,
-      package_price: Number(order.package_price),
-      admin_fee: Number(order.admin_fee),
+       package_price: Number(order.package_price),
+       duration_days: Number(order.duration_days),
+       admin_fee: Number(order.admin_fee),
       total_amount: Number(order.total_amount),
       payment_method: order.payment_method,
       midtrans_transaction_id: order.midtrans_transaction_id,

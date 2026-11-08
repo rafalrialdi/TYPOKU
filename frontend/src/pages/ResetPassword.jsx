@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import {
   FiAlertCircle,
   FiArrowLeft,
@@ -11,9 +12,28 @@ import {
   FiLock,
 } from 'react-icons/fi';
 import AuthHeader from '../components/AuthHeader';
-import { resetPassword, verifyResetToken } from '../services/authApi';
-import { useSubmit } from '../hooks/useSubmit';
+import QueryBoundary from '../components/QueryBoundary';
+import { useResetPasswordMutation } from '../hooks/useAuthMutations';
+import { api } from '../lib/api';
+import { queryKeys } from '../lib/queryKeys';
 import { getPasswordRequirements, getPasswordStrength } from '../utils/password';
+
+function ResetTokenGate({ token, onValid }) {
+  const { data } = useSuspenseQuery({
+    queryKey: queryKeys.resetToken(token),
+    queryFn: () =>
+      api(`/api/auth/reset-password/verify?token=${encodeURIComponent(token)}`),
+    select: (res) => res?.data,
+  });
+
+  useEffect(() => {
+    if (data?.email) {
+      onValid(data.email);
+    }
+  }, [data, onValid]);
+
+  return null;
+}
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -30,38 +50,23 @@ export default function ResetPassword() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [serverError, setServerError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const { run: submitResetPassword, loading: submitting } = useSubmit(resetPassword);
+
+  const resetPasswordMutation = useResetPasswordMutation();
+  const submitting = resetPasswordMutation.isPending;
 
   const strength = useMemo(() => getPasswordStrength(password), [password]);
   const requirements = useMemo(() => getPasswordRequirements(password), [password]);
 
-  useEffect(() => {
-    if (!token) {
-      setStatus('invalid');
-      setError('Tautan reset kata sandi tidak lengkap. Silakan minta tautan baru.');
-      return undefined;
-    }
+  const handleTokenValid = useCallback((verifiedEmail) => {
+    setEmail(verifiedEmail);
+    setError('');
+    setStatus('valid');
+  }, []);
 
-    let active = true;
-    setStatus('checking');
-
-    verifyResetToken(token)
-      .then((result) => {
-        if (!active) return;
-        setEmail(result.data?.email || '');
-        setError('');
-        setStatus('valid');
-      })
-      .catch((requestError) => {
-        if (!active) return;
-        setError(requestError.message);
-        setStatus('invalid');
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [token]);
+  const handleTokenError = useCallback((err) => {
+    setError(err?.message || 'Tautan pemulihan kata sandi tidak dapat digunakan atau sudah kedaluwarsa.');
+    setStatus('invalid');
+  }, []);
 
   function goToForgotPage() {
     return (
@@ -115,7 +120,7 @@ export default function ResetPassword() {
     setServerError('');
 
     try {
-      const result = await submitResetPassword({
+      const result = await resetPasswordMutation.mutateAsync({
         token,
         password,
         password_confirm: passwordConfirm,
@@ -129,211 +134,222 @@ export default function ResetPassword() {
     }
   }
 
-  if (status === 'checking') {
-    return (
-      <section className="auth-card auth-card--narrow">
-        <div className="auth-loading" role="status">
-          <div className="auth-spinner" aria-hidden="true" />
-          <p>Memverifikasi tautan pemulihan...</p>
-        </div>
-      </section>
-    );
-  }
-
-  if (status === 'invalid') {
-    return (
-      <section className="auth-card auth-card--narrow" aria-labelledby="reset-invalid-title">
-        <AuthHeader
-          titleId="reset-invalid-title"
-          title="Tautan Tidak Valid"
-          subtitle="Tautan pemulihan kata sandi tidak dapat digunakan atau sudah kedaluwarsa."
-        />
-
-        <div className="auth-alert auth-alert--error auth-alert--spaced" role="alert">
-          <FiAlertCircle aria-hidden="true" />
-          <span>{error}</span>
-        </div>
-
-        <div className="auth-actions">{goToForgotPage()}</div>
-
-        <hr className="auth-divider" />
-
-        <Link className="auth-back-link" to="/login">
-          <FiArrowLeft aria-hidden="true" />
-          Kembali ke halaman masuk
-        </Link>
-      </section>
-    );
-  }
-
-  if (status === 'success') {
-    return (
-      <section className="auth-card auth-card--narrow" aria-labelledby="reset-success-title">
-        <AuthHeader
-          titleId="reset-success-title"
-          title="Kata Sandi Berhasil Diperbarui"
-          subtitle={successMessage}
-        />
-
-        <div className="auth-actions">
-          <Link className="auth-button" to="/login">
-            Masuk Sekarang
-            <FiArrowRight aria-hidden="true" />
-          </Link>
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <section className="auth-card auth-card--narrow" aria-labelledby="reset-password-title">
-      <AuthHeader
-        titleId="reset-password-title"
-        title="Buat Kata Sandi Baru"
-        subtitle={
-          email
-            ? `Masukkan kata sandi baru untuk akun ${email}.`
-            : 'Masukkan kata sandi baru untuk akun Anda.'
-        }
-      />
-
-      <form className="auth-form" onSubmit={handleSubmit} noValidate>
-        {serverError ? (
-          <div className="auth-alert auth-alert--error" role="alert">
-            <FiAlertCircle aria-hidden="true" />
-            <span>{serverError}</span>
-          </div>
-        ) : null}
-
-        <div className="auth-field">
-          <label className="auth-label" htmlFor="reset-password">
-            Kata Sandi Baru
-          </label>
-          <div className="auth-input-wrap">
-            <span className="auth-input-icon" aria-hidden="true">
-              <FiLock />
-            </span>
-            <input
-              id="reset-password"
-              className={`auth-input${fieldErrors.password ? ' is-error' : ''}`}
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={handlePasswordChange}
-              placeholder="Buat kata sandi baru"
-              autoComplete="new-password"
-              aria-invalid={Boolean(fieldErrors.password)}
-              aria-describedby={fieldErrors.password ? 'reset-password-error' : undefined}
-            />
-            <button
-              className="auth-input-toggle"
-              type="button"
-              onClick={() => setShowPassword((current) => !current)}
-              aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
-            >
-              {showPassword ? <FiEyeOff /> : <FiEye />}
-            </button>
-          </div>
-
-          <div className="auth-strength">
-            <div className="auth-strength-bars" aria-hidden="true">
-              {[0, 1, 2, 3].map((index) => (
-                <span
-                  key={index}
-                  className={`auth-strength-bar${
-                    index < strength.score
-                      ? strength.tone === 'is-strong'
-                        ? ' is-active'
-                        : strength.tone === 'is-medium'
-                          ? ' is-medium'
-                          : ' is-weak'
-                      : ''
-                  }`}
-                />
-              ))}
-            </div>
-            <div className="auth-strength-meta">
-              <span>Kekuatan kata sandi</span>
-              <span className={`auth-strength-value ${strength.tone}`}>{strength.label}</span>
-            </div>
-          </div>
-
-          <div className="auth-requirements">
-            {requirements.map((requirement) => (
-              <span
-                key={requirement.label}
-                className={`auth-requirement${requirement.met ? ' is-met' : ''}`}
-              >
-                {requirement.met ? <FiCheckCircle /> : <FiCircle />}
-                {requirement.label}
-              </span>
-            ))}
-          </div>
-
-          {fieldErrors.password ? (
-            <p className="auth-field-error" id="reset-password-error">
-              {fieldErrors.password}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="auth-field">
-          <label className="auth-label" htmlFor="reset-password-confirm">
-            Konfirmasi Kata Sandi Baru
-          </label>
-          <div className="auth-input-wrap">
-            <span className="auth-input-icon" aria-hidden="true">
-              <FiLock />
-            </span>
-            <input
-              id="reset-password-confirm"
-              className={`auth-input${fieldErrors.password_confirm ? ' is-error' : ''}`}
-              type={showConfirmPassword ? 'text' : 'password'}
-              value={passwordConfirm}
-              onChange={handleConfirmChange}
-              placeholder="Ulangi kata sandi baru"
-              autoComplete="new-password"
-              aria-invalid={Boolean(fieldErrors.password_confirm)}
-              aria-describedby={
-                fieldErrors.password_confirm ? 'reset-password-confirm-error' : undefined
-              }
-            />
-            <button
-              className="auth-input-toggle"
-              type="button"
-              onClick={() => setShowConfirmPassword((current) => !current)}
-              aria-label={
-                showConfirmPassword
-                  ? 'Sembunyikan konfirmasi kata sandi'
-                  : 'Tampilkan konfirmasi kata sandi'
-              }
-            >
-              {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
-            </button>
-          </div>
-          {fieldErrors.password_confirm ? (
-            <p className="auth-field-error" id="reset-password-confirm-error">
-              {fieldErrors.password_confirm}
-            </p>
-          ) : null}
-        </div>
-
-        <button
-          className="auth-button auth-submit"
-          type="submit"
-          disabled={submitting}
-          aria-busy={submitting}
+    <>
+      {token && status === 'checking' ? (
+        <QueryBoundary
+          fallback={
+            <section className="auth-card auth-card--narrow">
+              <div className="auth-loading" role="status">
+                <div className="auth-spinner" aria-hidden="true" />
+                <p>Memverifikasi tautan pemulihan...</p>
+              </div>
+            </section>
+          }
+          errorFallback={(err) => {
+            handleTokenError(err);
+            return null;
+          }}
         >
-          {submitting ? 'Menyimpan...' : 'Simpan Kata Sandi Baru'}
-          {submitting ? null : <FiArrowRight aria-hidden="true" />}
-        </button>
-      </form>
+          <ResetTokenGate token={token} onValid={handleTokenValid} />
+        </QueryBoundary>
+      ) : null}
 
-      <hr className="auth-divider" />
+      {status === 'checking' ? (
+        <section className="auth-card auth-card--narrow">
+          <div className="auth-loading" role="status">
+            <div className="auth-spinner" aria-hidden="true" />
+            <p>Memverifikasi tautan pemulihan...</p>
+          </div>
+        </section>
+      ) : status === 'invalid' ? (
+        <section className="auth-card auth-card--narrow" aria-labelledby="reset-invalid-title">
+          <AuthHeader
+            titleId="reset-invalid-title"
+            title="Tautan Tidak Valid"
+            subtitle="Tautan pemulihan kata sandi tidak dapat digunakan atau sudah kedaluwarsa."
+          />
 
-      <Link className="auth-back-link" to="/login">
-        <FiArrowLeft aria-hidden="true" />
-        Kembali ke halaman masuk
-      </Link>
-    </section>
+          <div className="auth-alert auth-alert--error auth-alert--spaced" role="alert">
+            <FiAlertCircle aria-hidden="true" />
+            <span>{error}</span>
+          </div>
+
+          <div className="auth-actions">{goToForgotPage()}</div>
+
+          <hr className="auth-divider" />
+
+          <Link className="auth-back-link" to="/login">
+            <FiArrowLeft aria-hidden="true" />
+            Kembali ke halaman masuk
+          </Link>
+        </section>
+      ) : status === 'success' ? (
+        <section className="auth-card auth-card--narrow" aria-labelledby="reset-success-title">
+          <AuthHeader
+            titleId="reset-success-title"
+            title="Kata Sandi Berhasil Diperbarui"
+            subtitle={successMessage}
+          />
+
+          <div className="auth-actions">
+            <Link className="auth-button" to="/login">
+              Masuk Sekarang
+              <FiArrowRight aria-hidden="true" />
+            </Link>
+          </div>
+        </section>
+      ) : (
+        <section className="auth-card auth-card--narrow" aria-labelledby="reset-password-title">
+          <AuthHeader
+            titleId="reset-password-title"
+            title="Buat Kata Sandi Baru"
+            subtitle={
+              email
+                ? `Masukkan kata sandi baru untuk akun ${email}.`
+                : 'Masukkan kata sandi baru untuk akun Anda.'
+            }
+          />
+
+          <form className="auth-form" onSubmit={handleSubmit} noValidate>
+            {serverError ? (
+              <div className="auth-alert auth-alert--error" role="alert">
+                <FiAlertCircle aria-hidden="true" />
+                <span>{serverError}</span>
+              </div>
+            ) : null}
+
+            <div className="auth-field">
+              <label className="auth-label" htmlFor="reset-password">
+                Kata Sandi Baru
+              </label>
+              <div className="auth-input-wrap">
+                <span className="auth-input-icon" aria-hidden="true">
+                  <FiLock />
+                </span>
+                <input
+                  id="reset-password"
+                  className={`auth-input${fieldErrors.password ? ' is-error' : ''}`}
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={handlePasswordChange}
+                  placeholder="Buat kata sandi baru"
+                  autoComplete="new-password"
+                  aria-invalid={Boolean(fieldErrors.password)}
+                  aria-describedby={fieldErrors.password ? 'reset-password-error' : undefined}
+                />
+                <button
+                  className="auth-input-toggle"
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+
+              <div className="auth-strength">
+                <div className="auth-strength-bars" aria-hidden="true">
+                  {[0, 1, 2, 3].map((index) => (
+                    <span
+                      key={index}
+                      className={`auth-strength-bar${
+                        index < strength.score
+                          ? strength.tone === 'is-strong'
+                            ? ' is-active'
+                            : strength.tone === 'is-medium'
+                              ? ' is-medium'
+                              : ' is-weak'
+                          : ''
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="auth-strength-meta">
+                  <span>Kekuatan kata sandi</span>
+                  <span className={`auth-strength-value ${strength.tone}`}>{strength.label}</span>
+                </div>
+              </div>
+
+              <div className="auth-requirements">
+                {requirements.map((requirement) => (
+                  <span
+                    key={requirement.label}
+                    className={`auth-requirement${requirement.met ? ' is-met' : ''}`}
+                  >
+                    {requirement.met ? <FiCheckCircle /> : <FiCircle />}
+                    {requirement.label}
+                  </span>
+                ))}
+              </div>
+
+              {fieldErrors.password ? (
+                <p className="auth-field-error" id="reset-password-error">
+                  {fieldErrors.password}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="auth-field">
+              <label className="auth-label" htmlFor="reset-password-confirm">
+                Konfirmasi Kata Sandi Baru
+              </label>
+              <div className="auth-input-wrap">
+                <span className="auth-input-icon" aria-hidden="true">
+                  <FiLock />
+                </span>
+                <input
+                  id="reset-password-confirm"
+                  className={`auth-input${fieldErrors.password_confirm ? ' is-error' : ''}`}
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={passwordConfirm}
+                  onChange={handleConfirmChange}
+                  placeholder="Ulangi kata sandi baru"
+                  autoComplete="new-password"
+                  aria-invalid={Boolean(fieldErrors.password_confirm)}
+                  aria-describedby={
+                    fieldErrors.password_confirm ? 'reset-password-confirm-error' : undefined
+                  }
+                />
+                <button
+                  className="auth-input-toggle"
+                  type="button"
+                  onClick={() => setShowConfirmPassword((current) => !current)}
+                  aria-label={
+                    showConfirmPassword
+                      ? 'Sembunyikan konfirmasi kata sandi'
+                      : 'Tampilkan konfirmasi kata sandi'
+                  }
+                >
+                  {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+              {fieldErrors.password_confirm ? (
+                <p className="auth-field-error" id="reset-password-confirm-error">
+                  {fieldErrors.password_confirm}
+                </p>
+              ) : null}
+            </div>
+
+            <button
+              className="auth-button auth-submit"
+              type="submit"
+              disabled={submitting}
+              aria-busy={submitting}
+            >
+              {submitting ? 'Menyimpan...' : 'Simpan Kata Sandi Baru'}
+              {submitting ? null : <FiArrowRight aria-hidden="true" />}
+            </button>
+          </form>
+
+          <hr className="auth-divider" />
+
+          <Link className="auth-back-link" to="/login">
+            <FiArrowLeft aria-hidden="true" />
+            Kembali ke halaman masuk
+          </Link>
+        </section>
+      )}
+    </>
   );
 }
