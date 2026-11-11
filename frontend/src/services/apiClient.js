@@ -4,6 +4,7 @@ const API_BASE_URL = (import.meta.env?.VITE_API_BASE_URL || 'http://localhost:80
 );
 
 import { clearSession, getToken } from './session';
+import { clearPersistedCache } from '../lib/queryClient';
 
 async function request(path, { method = 'GET', body, auth = false, headers, signal, cache } = {}) {
   const isGet = method === 'GET';
@@ -39,14 +40,21 @@ async function request(path, { method = 'GET', body, auth = false, headers, sign
     data = null;
   }
 
+  // 401: token tidak ada, kedaluwarsa, atau tidak valid -> sesi berakhir.
+  // Seluruh jejak sesi dibersihkan (termasuk cache React Query) supaya data
+  // user lama tidak sempat tampil setelah halaman dimuat ulang.
   if (response.status === 401 && auth) {
     clearSession();
+    clearPersistedCache();
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
     return Promise.reject({ status: 401, redirected: true });
   }
 
+  // 403: token VALID, user hanya belum memiliki paket aktif (checkSubscription).
+  // Sesi TIDAK boleh dihapus dan user TIDAK boleh diarahkan ke /login; cukup
+  // kembalikan penanda hasAccess=false agar halaman menampilkan ajakan berlangganan.
   if (response.status === 403 && auth) {
     return Promise.reject({
       status: 403,
@@ -77,6 +85,14 @@ function loginUser(payload) {
   return request('/api/auth/login', {
     method: 'POST',
     body: payload,
+    auth: false,
+  });
+}
+
+function googleLogin(credential) {
+  return request('/api/auth/google', {
+    method: 'POST',
+    body: { credential },
     auth: false,
   });
 }
@@ -118,6 +134,7 @@ function getMyAccess() {
 export {
   getCurrentUser,
   getMyAccess,
+  googleLogin,
   loginUser,
   registerUser,
   request,

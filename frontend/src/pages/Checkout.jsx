@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fi';
 import Skeleton from '../components/Skeleton';
 import QueryBoundary from '../components/QueryBoundary';
+import { Toast, useToast } from '../components/Toast';
 import { usePackages } from '../hooks/usePackages';
 import { usePaymentConfig } from '../hooks/usePaymentConfig';
 import { useCreateOrder } from '../hooks/useOrderMutations';
@@ -94,12 +95,14 @@ function PendingOrderGate({ orderCode, onResolved, onInvalid }) {
 export default function Checkout() {
   const { packageId } = useParams();
   const navigate = useNavigate();
+  const { toast, showToast } = useToast();
   const storageKey = `typoku_pending_order_${packageId}`;
   const redirectedRef = useRef(false);
   const payingRef = useRef(false);
   const [pendingOrder, setPendingOrder] = useState(null);
   const [paymentError, setPaymentError] = useState('');
   const [paying, setPaying] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState(null);
 
   const [storedOrderCode] = useState(() => {
     try {
@@ -152,6 +155,10 @@ export default function Checkout() {
 
   async function handlePay() {
     if (!pkg || busy || payingRef.current) return;
+    if (selectedMethod !== 'qris') {
+      setPaymentError('Silakan pilih metode pembayaran QRIS terlebih dahulu.');
+      return;
+    }
 
     payingRef.current = true;
     setPaymentError('');
@@ -195,9 +202,11 @@ export default function Checkout() {
           setPaymentError('Pembayaran gagal diproses. Silakan coba lagi.');
         },
         onClose: () => {
-          stopPolling();
+          // Popup ditutup: reset status tombol agar bisa ditekan lagi & polling tetap jalan
           payingRef.current = false;
           setPaying(false);
+          if (redirectedRef.current) return;
+          showToast('Popup ditutup. Status pembayaran tetap dipantau otomatis.');
         },
       });
     } catch (payError) {
@@ -264,9 +273,25 @@ export default function Checkout() {
                 <p>Semua kanal pembayaran diproses aman dan terverifikasi seketika.</p>
               </div>
 
-              <div className="checkout-method checkout-method--active">
+              <div
+                className={`checkout-method${selectedMethod === 'qris' ? ' checkout-method--active' : ''}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setPaymentError('');
+                  setSelectedMethod((prev) => (prev === 'qris' ? null : 'qris'));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setPaymentError('');
+                    setSelectedMethod((prev) => (prev === 'qris' ? null : 'qris'));
+                  }
+                }}
+                aria-pressed={selectedMethod === 'qris'}
+              >
                 <span className="checkout-radio" aria-hidden="true">
-                  <span />
+                  {selectedMethod === 'qris' ? <span /> : null}
                 </span>
                 <span className="checkout-method-logo">QRIS</span>
                 <div className="checkout-method-info">
@@ -301,7 +326,15 @@ export default function Checkout() {
               <h3>Kebijakan Pengembalian Dana (Refund)</h3>
               <p>
                 Pengembalian dana dapat diajukan maksimal 7 hari setelah pesanan diterima apabila
-                produk rusak atau tidak sesuai pesanan. Kirim email ke rafalrialdi71@gmail.com
+                produk rusak atau tidak sesuai pesanan. Kirim email ke{' '}
+                <a
+                  className="checkout-refund-link"
+                  href="https://mail.google.com/mail/?view=cm&fs=1&to=rafalrialdi1@gmail.com&su=Pengajuan%20Refund%20TypoKu"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  rafalrialdi1@gmail.com
+                </a>{' '}
                 dengan nomor pesanan dan foto bukti. Setelah disetujui, dana dikembalikan ke
                 metode pembayaran awal dalam 7 sampai 14 hari kerja. Produk digital yang sudah
                 diunduh tidak dapat dikembalikan.
@@ -353,16 +386,18 @@ export default function Checkout() {
                 className="checkout-pay-button"
                 type="button"
                 onClick={handlePay}
-                disabled={busy}
+                disabled={busy || selectedMethod !== 'qris'}
                 aria-busy={busy}
               >
                 {createOrderMutation.isPending
                   ? 'Membuat pesanan...'
                   : paying
                     ? 'Menunggu pembayaran...'
-                    : pendingOrder
-                      ? 'Lanjutkan Pembayaran'
-                      : 'Bayar Sekarang'}
+                    : selectedMethod !== 'qris'
+                      ? 'Pilih Metode Pembayaran'
+                      : pendingOrder
+                        ? 'Lanjutkan Pembayaran'
+                        : 'Bayar Sekarang'}
                 {busy ? null : <FiArrowRight aria-hidden="true" />}
               </button>
 
@@ -379,6 +414,7 @@ export default function Checkout() {
           </aside>
         </div>
       </div>
+      <Toast toast={toast} />
     </div>
   );
 }

@@ -127,6 +127,12 @@
 .home-button-secondary:hover {
   background: #f9fafb;
   color: #3525cd;
+  transform: translateY(-2px);
+}
+
+.home-button-secondary:active,
+.home-pricing-button:active {
+  transform: translateY(0);
 }
 
 .home-button-secondary svg {
@@ -513,11 +519,12 @@
   font-weight: 600;
   text-decoration: none;
   box-shadow: 0 1px 2px rgba(20, 27, 43, 0.08);
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .home-pricing-button:hover {
   background: #4338ca;
+  transform: translateY(-2px);
 }
 
 .home-pricing-button svg {

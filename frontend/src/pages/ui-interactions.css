@@ -1,0 +1,172 @@
+/* ==========================================================================
+   TypoKu — Efek Interaktif Card, Tombol, dan Toast
+   Khusus untuk halaman Paket, Checkout, dan Status Pembayaran.
+   Semua selector di-scope ke class halaman terkait agar aman & tanpa regresi.
+   ========================================================================== */
+
+/* 1. CSS Variables terisolasi untuk 3 halaman */
+:root {
+  --ui-toast-bg: #111827;
+}
+
+.paket-page,
+.checkout-page,
+.payment-page {
+  --ui-card-lift: translateY(-8px);
+  --ui-card-shadow-hover: 0 24px 48px -28px rgba(15, 23, 42, 0.35);
+  --ui-card-transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  --ui-button-lift: translateY(-3px);
+  --ui-button-press: translateY(0) scale(0.97);
+  --ui-button-shadow-hover: 0 14px 26px -12px rgba(79, 70, 229, 0.55);
+  --ui-button-shadow-active: 0 4px 10px -6px rgba(79, 70, 229, 0.45);
+  --ui-button-transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+
+  --ui-toast-bg: #111827;
+}
+
+/* 2. Efek Card Terangkat saat Hover (0.3s ease)
+   Prinsip: Card diangkat HANYA jika ada beberapa card pilihan (> 1 card, misal card pilihan paket).
+   Jika hanya ada 1 card aksi / ringkasan / informasi, card tersebut TIDAK diangkat. */
+.paket-page .paket-card {
+  transition: var(--ui-card-transition);
+  will-change: transform;
+}
+
+.paket-page .paket-card:hover:not(.paket-card--skeleton) {
+  transform: var(--ui-card-lift);
+  box-shadow: var(--ui-card-shadow-hover);
+}
+
+/* Khusus card featured di Paket: pertahankan estetika aksen ungu lebih kuat */
+.paket-page .paket-card--featured:hover:not(.paket-card--skeleton) {
+  box-shadow: 0 30px 60px -28px rgba(79, 70, 229, 0.5);
+}
+
+/* Card tunggal (non-pilihan) di halaman Checkout dan Pembayaran Lunas/Expired tidak diangkat */
+.checkout-page .checkout-card,
+.checkout-page .checkout-card:hover,
+.checkout-page .checkout-summary,
+.checkout-page .checkout-summary:hover,
+.payment-page .payment-card,
+.payment-page .payment-card:hover,
+.payment-page .payment-summary,
+.payment-page .payment-summary:hover {
+  transform: none !important;
+}
+
+/* 3. Efek Tombol: Hover Terangkat (-3px) & Tekan/Active (scale 0.97) */
+.paket-page .paket-button,
+.checkout-page .checkout-pay-button,
+.payment-page .payment-button {
+  transition: var(--ui-button-transition);
+}
+
+.paket-page .paket-button:hover,
+.checkout-page .checkout-pay-button:hover:not(:disabled):not([aria-busy='true']),
+.payment-page .payment-button:hover:not(:disabled):not([aria-busy='true']) {
+  transform: var(--ui-button-lift);
+  box-shadow: var(--ui-button-shadow-hover);
+}
+
+.paket-page .paket-button:active,
+.checkout-page .checkout-pay-button:active:not(:disabled):not([aria-busy='true']),
+.payment-page .payment-button:active:not(:disabled):not([aria-busy='true']) {
+  transform: var(--ui-button-press);
+  box-shadow: var(--ui-button-shadow-active);
+}
+
+/* Tombol Salin ID di ringkasan pembayaran */
+.payment-page .payment-copy {
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.payment-page .payment-copy:active {
+  transform: scale(0.92);
+}
+
+/* 4. Aksesibilitas Keyboard: Focus-visible yang tegas */
+.paket-page .paket-button:focus-visible,
+.checkout-page .checkout-pay-button:focus-visible,
+.payment-page .payment-button:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 3px;
+}
+
+.payment-page .payment-copy:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+/* 5. Komponen Toast (Fixed Bottom) */
+.ui-toast-viewport {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  padding-inline: 1rem;
+  pointer-events: none;
+}
+
+.ui-toast {
+  max-width: min(28rem, calc(100vw - 2rem));
+  padding: 0.625rem 1rem;
+  border-radius: 0.625rem;
+  background-color: var(--ui-toast-bg, #111827);
+  color: #ffffff;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+  box-shadow: 0 16px 36px -16px rgba(15, 23, 42, 0.5);
+  animation: ui-toast-enter 0.22s ease-out;
+}
+
+@keyframes ui-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 6. Preferensi Pengguna & Adaptasi Layar */
+@media (prefers-reduced-motion: reduce) {
+  .paket-page .paket-card,
+  .paket-page .paket-button,
+  .checkout-page .checkout-pay-button,
+  .payment-page .payment-button,
+  .payment-page .payment-copy {
+    transition: none !important;
+  }
+
+  .paket-page .paket-card:hover,
+  .paket-page .paket-button:hover,
+  .checkout-page .checkout-pay-button:hover,
+  .payment-page .payment-button:hover,
+  .paket-page .paket-button:active,
+  .checkout-page .checkout-pay-button:active,
+  .payment-page .payment-button:active,
+  .payment-page .payment-copy:active {
+    transform: none !important;
+  }
+
+  .ui-toast {
+    animation: none !important;
+  }
+}
+
+@media (hover: none) {
+  /* Cegah efek hover nyangkut pada perangkat layar sentuh */
+  .paket-page .paket-card:hover,
+  .paket-page .paket-button:hover,
+  .checkout-page .checkout-pay-button:hover,
+  .payment-page .payment-button:hover {
+    transform: none;
+  }
+}

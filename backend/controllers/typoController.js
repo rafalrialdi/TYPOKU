@@ -122,6 +122,10 @@ async function extractText(file) {
     return (result.value || '').trim();
   }
 
+  if (filename.endsWith('.txt')) {
+    return (file.buffer ? file.buffer.toString('utf-8') : '').trim();
+  }
+
   return '';
 }
 
@@ -319,9 +323,14 @@ ${chunk}
       ...downloadInfo,
     });
   } catch (error) {
-    return res.status(error.statusCode || 500).json({
+    console.error('cekTypo error:', error);
+    const statusCode = error.statusCode || 500;
+    const message = error.statusCode
+      ? `Gagal memproses dokumen: ${error.message}`
+      : 'Gagal memproses dokumen. Pastikan berkas tidak rusak dan formatnya sesuai, lalu coba lagi.';
+    return res.status(statusCode).json({
       status: 'error',
-      message: `Gagal memproses dokumen: ${error.message}`,
+      message,
     });
   }
 }
@@ -417,9 +426,14 @@ ${teks}
       ...downloadInfo,
     });
   } catch (error) {
-    return res.status(error.statusCode || 500).json({
+    console.error('parafraseTypo error:', error);
+    const statusCode = error.statusCode || 500;
+    const message = error.statusCode
+      ? `Gagal memparafrase dokumen: ${error.message}`
+      : 'Gagal memparafrase dokumen. Pastikan berkas tidak rusak dan formatnya sesuai, lalu coba lagi.';
+    return res.status(statusCode).json({
       status: 'error',
-      message: `Gagal memparafrase dokumen: ${error.message}`,
+      message,
     });
   }
 }
@@ -470,9 +484,10 @@ async function downloadResult(req, res) {
     res.setHeader('Content-Length', pdfBuffer.length);
     return res.send(pdfBuffer);
   } catch (error) {
+    console.error('downloadResult error:', error);
     return res.status(500).json({
       status: 'error',
-      message: `Gagal mengunduh dokumen: ${error.message}`,
+      message: 'Gagal membuat berkas unduhan. Silakan coba lagi.',
     });
   }
 }

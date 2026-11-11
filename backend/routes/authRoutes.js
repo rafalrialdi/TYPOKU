@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, query } = require('express-validator');
 const authController = require('../controllers/authController');
+const googleAuthController = require('../controllers/googleAuthController');
 const passwordResetController = require('../controllers/passwordResetController');
 const authenticate = require('../middleware/authenticate');
 const validate = require('../middleware/validate');
@@ -61,6 +62,14 @@ router.post(
   ],
   validate,
   authController.login
+);
+
+router.post(
+  '/google',
+  authLimiter,
+  [body('credential').trim().notEmpty().withMessage('Credential Google wajib disertakan')],
+  validate,
+  googleAuthController.googleLogin
 );
 
 router.get('/me', authenticate, authController.me);

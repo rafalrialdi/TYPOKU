@@ -348,6 +348,14 @@ async function getPaymentStatus(req, res) {
       }
     }
 
+    // Jaga-jaga webhook/Midtrans telat: pesanan pending yang sudah lewat expired_at langsung expired
+    if (order.status === 'pending' && new Date(order.expired_at) <= new Date()) {
+      await db.query("UPDATE orders SET status = 'expired' WHERE id = ? AND status != 'paid'", [
+        order.id,
+      ]);
+      order.status = 'expired';
+    }
+
     const isPending = order.status === 'pending' && new Date(order.expired_at) > new Date();
 
     return sendSuccess(res, 'Status pembayaran berhasil diperiksa', {

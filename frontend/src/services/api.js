@@ -36,10 +36,10 @@ export async function parafrase(text, style = 'akademik') {
   return response;
 }
 
-export async function terjemah(text, targetLang = 'en') {
+export async function terjemah(text, sourceLang = 'id', targetLang = 'en') {
   const response = await request('/api/terjemah', {
     method: 'POST',
-    body: { text, target_lang: targetLang },
+    body: { text, source_lang: sourceLang, target_lang: targetLang },
     auth: true,
   });
 

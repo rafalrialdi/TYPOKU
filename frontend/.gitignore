@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Dokumentasi (README tetap dilacak)
+*.md
+!README.md
+!readme.md
+
+# Log development
+dev.log

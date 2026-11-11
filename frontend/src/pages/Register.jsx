@@ -42,7 +42,7 @@ const registerSchema = z
       .regex(/\d/, 'Kata sandi harus mengandung angka'),
     password_confirm: z.string().min(1, 'Konfirmasi kata sandi wajib diisi'),
     terms: z.boolean().refine((value) => value === true, {
-      message: 'Anda harus menyetujui ketentuan layanan',
+      message: 'Anda harus menyetujui Syarat & Ketentuan dan Kebijakan Privasi',
     }),
   })
   .refine((data) => data.password === data.password_confirm, {
@@ -297,7 +297,15 @@ export default function Register() {
               {...register('terms')}
             />
             <span>
-              Dengan mendaftar, saya menyetujui Ketentuan Layanan dan Kebijakan Privasi TypoKu.
+              Dengan mendaftar, saya menyetujui{' '}
+              <Link className="auth-text-link" to="/syarat-ketentuan">
+                Syarat &amp; Ketentuan
+              </Link>{' '}
+              dan{' '}
+              <Link className="auth-text-link" to="/kebijakan-privasi">
+                Kebijakan Privasi
+              </Link>
+              .
             </span>
           </label>
           {errors.terms ? <p className="auth-field-error">{errors.terms.message}</p> : null}

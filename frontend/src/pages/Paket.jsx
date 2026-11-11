@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { FiCheckCircle } from 'react-icons/fi';
 import Skeleton from '../components/Skeleton';
 import { usePackages } from '../hooks/usePackages';
@@ -70,6 +70,7 @@ export function PaketSkeleton() {
 }
 
 export default function Paket() {
+  const navigate = useNavigate();
   const { data: packages } = usePackages();
 
   return (
@@ -91,6 +92,15 @@ export default function Paket() {
                 <article
                   className={`paket-card${featured ? ' paket-card--featured' : ''}`}
                   key={pkg.id}
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => navigate(`/checkout/${pkg.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate(`/checkout/${pkg.id}`);
+                    }
+                  }}
                 >
                   <div className="paket-card-body">
                     <span
@@ -142,12 +152,11 @@ export default function Paket() {
                   </div>
 
                   <div className="paket-card-action">
-                    <Link
+                    <span
                       className={`paket-button${featured ? ' paket-button--primary' : ''}`}
-                      to={`/checkout/${pkg.id}`}
                     >
                       {ACTION_BY_CODE[code] || 'Pilih Paket'}
-                    </Link>
+                    </span>
                   </div>
                 </article>
               );

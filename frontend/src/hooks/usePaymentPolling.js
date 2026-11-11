@@ -61,7 +61,17 @@ export function usePaymentPolling({
     [intervalMs, stop]
   );
 
-  useEffect(() => stop, [stop]);
+  useEffect(() => {
+    const handleExit = () => stop();
+    window.addEventListener('pagehide', handleExit);
+    window.addEventListener('beforeunload', handleExit);
+
+    return () => {
+      window.removeEventListener('pagehide', handleExit);
+      window.removeEventListener('beforeunload', handleExit);
+      stop();
+    };
+  }, [stop]);
 
   return { start, stop };
 }

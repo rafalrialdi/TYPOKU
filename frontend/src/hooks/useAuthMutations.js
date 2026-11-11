@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { googleLogin } from '../services/apiClient';
 import { queryKeys } from '../lib/queryKeys';
 
 export function useLoginMutation() {
@@ -10,6 +11,15 @@ export function useLoginMutation() {
         body: payload,
         auth: false,
       }),
+    meta: {
+      invalidates: [queryKeys.myOrders, queryKeys.myAccess],
+    },
+  });
+}
+
+export function useGoogleLoginMutation() {
+  return useMutation({
+    mutationFn: (credential) => googleLogin(credential),
     meta: {
       invalidates: [queryKeys.myOrders, queryKeys.myAccess],
     },

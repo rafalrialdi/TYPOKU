@@ -114,11 +114,24 @@
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
   background-color: #ffffff;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.checkout-method:hover {
+  border-color: #c7d2fe;
 }
 
 .checkout-method--active {
-  border-color: #c7d2fe;
+  border-color: #818cf8;
   background-color: #f5f7ff;
+  box-shadow: 0 0 0 1px #818cf8;
+}
+
+.checkout-method:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
 }
 
 .checkout-radio {
@@ -128,9 +141,14 @@
   width: 1.125rem;
   height: 1.125rem;
   margin-top: 0.125rem;
-  border: 2px solid #4f46e5;
+  border: 2px solid #d1d5db;
   border-radius: 50%;
   background-color: #ffffff;
+  transition: border-color 0.15s ease;
+}
+
+.checkout-method--active .checkout-radio {
+  border-color: #4f46e5;
 }
 
 .checkout-radio span {
@@ -248,6 +266,17 @@
   color: #4b5563;
   font-size: 0.8125rem;
   line-height: 1.75;
+}
+
+.checkout-card--refund a {
+  color: #3525cd;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.checkout-card--refund a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .checkout-summary {

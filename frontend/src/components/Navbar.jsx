@@ -5,7 +5,9 @@ import {
   FiChevronUp,
   FiFileText,
   FiLogOut,
+  FiMenu,
   FiUser,
+  FiX,
 } from 'react-icons/fi';
 import QueryBoundary from './QueryBoundary';
 import TransactionHistory, { TransactionHistorySkeleton } from './TransactionHistory';
@@ -29,33 +31,41 @@ export default function Navbar() {
   const navigate = useNavigate();
   const menuRef = useRef(null);
   const buttonRef = useRef(null);
+  const collapseBtnRef = useRef(null);
+  const mobileNavRef = useRef(null);
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const currentPath = location.pathname;
   const authenticated = Boolean(user) && isAuthenticated();
 
   useEffect(() => {
     setMenuOpen(false);
+    setNavOpen(false);
   }, [currentPath]);
 
   useEffect(() => {
-    if (!menuOpen) {
+    if (!menuOpen && !navOpen) {
       return undefined;
     }
 
     function handlePointerDown(event) {
       if (
         menuRef.current?.contains(event.target) ||
-        buttonRef.current?.contains(event.target)
+        buttonRef.current?.contains(event.target) ||
+        collapseBtnRef.current?.contains(event.target) ||
+        mobileNavRef.current?.contains(event.target)
       ) {
         return;
       }
       setMenuOpen(false);
+      setNavOpen(false);
     }
 
     function handleKeyDown(event) {
       if (event.key === 'Escape') {
         setMenuOpen(false);
+        setNavOpen(false);
         buttonRef.current?.focus();
       }
     }
@@ -67,11 +77,12 @@ export default function Navbar() {
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [menuOpen]);
+  }, [menuOpen, navOpen]);
 
   function handleLogout() {
     logout();
     setMenuOpen(false);
+    setNavOpen(false);
     navigate('/login', { replace: true });
   }
 
@@ -87,9 +98,15 @@ export default function Navbar() {
           <Link to="/" className={currentPath === '/' ? 'nav-link active' : 'nav-link'}>
             Beranda
           </Link>
-          <Link to="/cek-typo" className="nav-link">Cek Typo</Link>
-          <Link to="/parafrase" className="nav-link">Parafrase</Link>
-          <Link to="/terjemah" className="nav-link">Terjemah</Link>
+          <Link to="/cek-typo" className={currentPath === '/cek-typo' ? 'nav-link active' : 'nav-link'}>
+            Cek Typo
+          </Link>
+          <Link to="/parafrase" className={currentPath === '/parafrase' ? 'nav-link active' : 'nav-link'}>
+            Parafrase
+          </Link>
+          <Link to="/terjemah" className={currentPath === '/terjemah' ? 'nav-link active' : 'nav-link'}>
+            Terjemah
+          </Link>
           <Link to="/paket" className={currentPath === '/paket' ? 'nav-link active' : 'nav-link'}>
             Paket
           </Link>
@@ -102,7 +119,10 @@ export default function Navbar() {
                 ref={buttonRef}
                 className="nav-user"
                 type="button"
-                onClick={() => setMenuOpen((current) => !current)}
+                onClick={() => {
+                  setMenuOpen((current) => !current);
+                  setNavOpen(false);
+                }}
                 aria-expanded={menuOpen}
                 aria-haspopup="menu"
                 aria-label={`Menu profil ${user.name || user.email}`}
@@ -164,8 +184,74 @@ export default function Navbar() {
               </Link>
             </>
           )}
+
+          {/* Tombol navigasi collapse di pojok kanan navbar untuk tampilan mobile */}
+          <button
+            ref={collapseBtnRef}
+            className="nav-collapse-btn"
+            type="button"
+            onClick={() => {
+              setNavOpen((curr) => !curr);
+              setMenuOpen(false);
+            }}
+            aria-expanded={navOpen}
+            aria-label={navOpen ? 'Tutup navigasi' : 'Buka navigasi'}
+          >
+            {navOpen ? <FiX aria-hidden="true" /> : <FiMenu aria-hidden="true" />}
+          </button>
         </div>
       </div>
+
+      {/* Dropdown menu navigasi collapse saat di HP */}
+      {navOpen ? (
+        <div className="nav-mobile-menu" ref={mobileNavRef} role="menu" aria-label="Menu navigasi mobile">
+          <Link
+            to="/"
+            className={currentPath === '/' ? 'nav-mobile-link active' : 'nav-mobile-link'}
+            onClick={() => setNavOpen(false)}
+          >
+            Beranda
+          </Link>
+          <Link
+            to="/cek-typo"
+            className={currentPath === '/cek-typo' ? 'nav-mobile-link active' : 'nav-mobile-link'}
+            onClick={() => setNavOpen(false)}
+          >
+            Cek Typo
+          </Link>
+          <Link
+            to="/parafrase"
+            className={currentPath === '/parafrase' ? 'nav-mobile-link active' : 'nav-mobile-link'}
+            onClick={() => setNavOpen(false)}
+          >
+            Parafrase
+          </Link>
+          <Link
+            to="/terjemah"
+            className={currentPath === '/terjemah' ? 'nav-mobile-link active' : 'nav-mobile-link'}
+            onClick={() => setNavOpen(false)}
+          >
+            Terjemah
+          </Link>
+          <Link
+            to="/paket"
+            className={currentPath === '/paket' ? 'nav-mobile-link active' : 'nav-mobile-link'}
+            onClick={() => setNavOpen(false)}
+          >
+            Paket
+          </Link>
+          {!authenticated ? (
+            <div className="nav-mobile-auth">
+              <Link to="/login" className="nav-mobile-login" onClick={() => setNavOpen(false)}>
+                Masuk
+              </Link>
+              <Link to="/register" className="nav-mobile-register" onClick={() => setNavOpen(false)}>
+                Daftar
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </nav>
   );
 }

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { FiClock, FiMail, FiPhone } from 'react-icons/fi';
 import { FaGithub, FaInstagram, FaTiktok } from 'react-icons/fa';
 import './components.css';
@@ -74,7 +75,14 @@ export default function Footer() {
             <ul className="footer-links footer-links-contact">
               <li className="footer-contact">
                 <FiMail />
-                <a href="mailto:bantuan@typoku.id" className="footer-link">bantuan@typoku.id</a>
+                <a
+                  href="https://mail.google.com/mail/?view=cm&fs=1&to=rafalrialdi1@gmail.com"
+                  className="footer-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  rafalrialdi1@gmail.com
+                </a>
               </li>
               <li className="footer-contact">
                 <FiPhone />
@@ -89,7 +97,22 @@ export default function Footer() {
         </div>
 
         <div className="footer-bottom">
-          <span>&copy; 2026 TypoKu. Hak Cipta Dilindungi Undang-Undang.</span>
+          <div className="footer-bottom-left">
+            <span>&copy; 2026 TypoKu. Hak Cipta Dilindungi Undang-Undang.</span>
+
+            <div className="footer-legal">
+              <Link className="footer-link" to="/kebijakan-privasi">
+                Kebijakan Privasi
+              </Link>
+              <span className="footer-legal-sep" aria-hidden="true">
+                &middot;
+              </span>
+              <Link className="footer-link" to="/syarat-ketentuan">
+                Syarat &amp; Ketentuan
+              </Link>
+            </div>
+          </div>
+
           <div className="footer-social">
             {socials.map(({ label, href, icon: Icon }) => (
               <a

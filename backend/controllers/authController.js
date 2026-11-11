@@ -35,8 +35,8 @@ async function register(req, res) {
 
     // Simpan user baru
     const [result] = await db.query(
-      `INSERT INTO users (name, email, phone, password_hash, role, is_active)
-       VALUES (?, ?, ?, ?, 'user', 1)`,
+      `INSERT INTO users (name, email, phone, password_hash)
+       VALUES (?, ?, ?, ?)`,
       [name.trim(), cleanEmail, cleanPhone, passwordHash]
     );
 
@@ -44,7 +44,6 @@ async function register(req, res) {
     const token = generateAccessToken({
       id: newUserId,
       email: cleanEmail,
-      role: 'user',
     });
 
     return sendSuccess(
@@ -57,7 +56,6 @@ async function register(req, res) {
           name: name.trim(),
           email: cleanEmail,
           phone: cleanPhone,
-          role: 'user',
         },
       },
       201
@@ -74,7 +72,7 @@ async function login(req, res) {
     const cleanEmail = (email || '').trim().toLowerCase();
 
     const [users] = await db.query(
-      'SELECT id, name, email, phone, password_hash, role, is_active FROM users WHERE email = ? LIMIT 1',
+      'SELECT id, name, email, phone, password_hash, google_id FROM users WHERE email = ? LIMIT 1',
       [cleanEmail]
     );
 
@@ -84,8 +82,14 @@ async function login(req, res) {
 
     const user = users[0];
 
-    if (!user.is_active) {
-      return sendError(res, 'Akun Anda dinonaktifkan. Silakan hubungi dukungan TypoKu.', 403);
+    // Akun yang terdaftar lewat Google tidak punya kata sandi.
+    // Jangan membandingkan hash kosong agar tidak crash.
+    if (!user.password_hash) {
+      return sendError(
+        res,
+        'Akun ini terdaftar dengan Google. Silakan masuk dengan tombol "Masuk dengan Google".',
+        400
+      );
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
@@ -96,7 +100,6 @@ async function login(req, res) {
     const token = generateAccessToken({
       id: user.id,
       email: user.email,
-      role: user.role,
     });
 
     return sendSuccess(res, 'Berhasil masuk ke akun TypoKu', {
@@ -106,7 +109,6 @@ async function login(req, res) {
         name: user.name,
         email: user.email,
         phone: user.phone,
-        role: user.role,
       },
     });
   } catch (error) {
@@ -119,7 +121,9 @@ async function me(req, res) {
   try {
     const userId = req.user.id;
     const [users] = await db.query(
-      'SELECT id, name, email, phone, role, is_active, created_at FROM users WHERE id = ? LIMIT 1',
+      `SELECT id, name, email, phone, google_id, created_at,
+              (password_hash IS NOT NULL) AS has_password
+       FROM users WHERE id = ? LIMIT 1`,
       [userId]
     );
 
@@ -127,8 +131,13 @@ async function me(req, res) {
       return sendError(res, 'Pengguna tidak ditemukan', 404);
     }
 
+    const user = users[0];
+
     return sendSuccess(res, 'Data pengguna berhasil diambil', {
-      user: users[0],
+      user: {
+        ...user,
+        has_password: Boolean(user.has_password),
+      },
     });
   } catch (error) {
     console.error('Me error:', error);

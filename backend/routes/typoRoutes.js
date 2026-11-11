@@ -22,13 +22,17 @@ const upload = multer({
 
     const filename = (file.originalname || '').toLowerCase();
 
-    if (filename.endsWith('.pdf') || filename.endsWith('.docx')) {
+    if (
+      filename.endsWith('.pdf') ||
+      filename.endsWith('.docx') ||
+      filename.endsWith('.txt')
+    ) {
       return cb(null, true);
     }
 
     return cb(
       Object.assign(
-        new Error('Format file tidak didukung. Harap unggah PDF atau DOCX.'),
+        new Error('Format file tidak didukung. Harap unggah PDF, DOCX, atau TXT.'),
         { statusCode: 400 }
       )
     );

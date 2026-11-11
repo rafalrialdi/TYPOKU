@@ -176,6 +176,27 @@
   font-weight: 500;
 }
 
+/* Link "Lupa kata sandi?" di bawah kolom kata sandi.
+   Rata kanan mengikuti tepi KOLOM INPUT: input memakai border 1px sehingga
+   tepi visualnya 1px lebih ke dalam. Margin 1px membuat teks link sejajar
+   persis dengan tepi kanan border input. */
+.auth-forgot-link {
+  align-self: flex-end;
+  margin-top: 0.125rem;
+  margin-right: 1px;
+  color: #3525cd;
+  font-size: clamp(0.72rem, 1.4vh, 0.8125rem);
+  font-weight: 600;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.auth-forgot-link:hover {
+  color: #4338ca;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .auth-input-wrap {
   position: relative;
   display: flex;
@@ -337,8 +358,12 @@
 .auth-checkbox-row a {
   color: #3525cd;
   font-weight: 600;
-  text-decoration: underline;
+  text-decoration: none;
   text-underline-offset: 2px;
+}
+
+.auth-checkbox-row a:hover {
+  text-decoration: underline;
 }
 
 .auth-button {
@@ -411,6 +436,86 @@
   margin-top: 0.25rem;
 }
 
+/* ============================================================
+   TOMBOL GOOGLE
+   Tombol dirender oleh Google Identity Services di dalam iframe.
+   Lebar dibatasi 200-400px oleh Google, jadi wrapper hanya
+   memusatkan tanpa mengubah tampilan bawaan Google.
+   ============================================================ */
+
+.auth-google-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin: clamp(0.6rem, 1.8vh, 1.1rem) 0 clamp(0.6rem, 1.6vh, 0.9rem);
+  color: #6b7280;
+  font-size: clamp(0.72rem, 1.4vh, 0.8125rem);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.auth-google-divider::before,
+.auth-google-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.auth-google-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  /* Jangan pakai overflow:hidden — Google menyisipkan iframe sedikit di luar
+     batas wrapper demi bayangan/animasi tombol. */
+  overflow: visible;
+}
+
+/* Wrapper GoogleLogin memakai height inline dari library (40px untuk
+   size="large"). Batasi lebarnya saja; jangan diubah min-width-nya karena
+   Google menetapkan lebar iframe dalam piksel absolut — bila wrapper lebih
+   sempit dari iframe, tombol akan terpotong/terdorong keluar. */
+/* Google merender tombol pada lebar TETAP sesuai prop `width` yang dihitung
+   di Login.jsx. Wrapper hanya memusatkan; jangan memaksa lebarnya karena
+   isi tombol Google akan meluber ke luar card. */
+.auth-google-wrap > div {
+  max-width: 100%;
+}
+
+/* Google menetapkan width/height inline pada iframe sesuai prop `width`.
+   Biarkan apa adanya agar tampilan tombol tetap standar Google. */
+.auth-google-wrap iframe {
+  display: block;
+  max-width: 100%;
+}
+
+.auth-google-wrap[aria-busy='true'] {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.auth-google-status {
+  margin-top: 0.5rem;
+  color: #4b5563;
+  font-size: clamp(0.72rem, 1.4vh, 0.8125rem);
+  text-align: center;
+}
+
+/* Teks persetujuan Syarat & Ketentuan di bawah metode masuk (halaman Login). */
+.auth-consent-text {
+  margin-top: clamp(0.55rem, 1.6vh, 1rem);
+  color: #6b7280;
+  font-size: clamp(0.72rem, 1.4vh, 0.8125rem);
+  line-height: 1.55;
+  text-align: center;
+}
+
+.auth-consent-text .auth-text-link {
+  font-size: inherit;
+}
+
 .auth-footer-text {
   margin-top: clamp(0.45rem, 1.6vh, 1.25rem);
   color: #4b5563;
@@ -422,12 +527,27 @@
 .auth-link {
   color: #3525cd;
   font-weight: 600;
-  text-decoration: underline;
+  text-decoration: none;
   text-underline-offset: 3px;
 }
 
 .auth-link:hover {
   color: #4338ca;
+  text-decoration: underline;
+}
+
+/* Tautan di dalam teks persetujuan: tanpa garis bawah, underline hanya saat hover. */
+.auth-text-link {
+  color: #3525cd;
+  font-weight: 600;
+  text-decoration: none;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.auth-text-link:hover {
+  color: #4338ca;
+  text-decoration: underline;
 }
 
 .auth-divider {
@@ -774,6 +894,10 @@
     font-size: 0.62rem;
   }
 
+  .auth-card:not(.auth-card--register) .auth-forgot-link {
+    font-size: 0.62rem;
+  }
+
   .auth-card:not(.auth-card--register) .auth-input,
   .auth-card:not(.auth-card--register) .auth-button {
     height: 2.35rem;
@@ -869,6 +993,10 @@
   }
 
   .auth-card:not(.auth-card--register) .auth-label-hint {
+    font-size: clamp(0.6rem, 0.75vw, 0.65rem);
+  }
+
+  .auth-card:not(.auth-card--register) .auth-forgot-link {
     font-size: clamp(0.6rem, 0.75vw, 0.65rem);
   }
 

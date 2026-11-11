@@ -1,57 +1,68 @@
 import React from 'react';
 import { FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
 
+const isDev = import.meta.env.DEV;
+
+const hasArrayChanged = (a = [], b = []) =>
+  a.length !== b.length || a.some((item, i) => !Object.is(item, b[i]));
+
 export class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+  state = { hasError: false, error: null };
 
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // Bisa digunakan untuk logging jika dibutuhkan
+    console.error('ErrorBoundary menangkap error:', error, errorInfo.componentStack);
+    this.props.onError?.(error, errorInfo);
+  }
+
+  componentDidUpdate(prevProps) {
+    if (
+      this.state.hasError &&
+      hasArrayChanged(prevProps.resetKeys, this.props.resetKeys)
+    ) {
+      this.handleReset();
+    }
   }
 
   handleReset = () => {
-    if (this.props.onReset) {
-      this.props.onReset();
-    }
+    this.props.onReset?.();
     this.setState({ hasError: false, error: null });
   };
 
   render() {
-    if (this.state.hasError) {
-      if (typeof this.props.fallback === 'function') {
-        return this.props.fallback(this.state.error, this.handleReset);
-      }
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
+    const { hasError, error } = this.state;
+    const { fallback, children } = this.props;
 
-      return (
-        <div className="paket-state" role="alert" style={{ margin: '2rem auto', maxWidth: '32rem' }}>
-          <p className="paket-state-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            <FiAlertCircle aria-hidden="true" />
-            Terjadi Kesalahan
-          </p>
-          <p className="paket-state-text">
-            {this.state.error?.message || 'Gagal memuat data dari server. Silakan coba beberapa saat lagi.'}
-          </p>
-          <button
-            className="paket-button paket-button--primary paket-state-button"
-            type="button"
-            onClick={this.handleReset}
-          >
-            <FiRefreshCw aria-hidden="true" />
-            Coba Lagi
-          </button>
-        </div>
-      );
+    if (!hasError) return children;
+
+    if (typeof fallback === 'function') {
+      return fallback(error, this.handleReset);
     }
+    if (fallback) return fallback;
 
-    return this.props.children;
+    return (
+      <div className="paket-state paket-state--error" role="alert">
+        <p className="paket-state-title">
+          <FiAlertCircle aria-hidden="true" />
+          Terjadi Kesalahan
+        </p>
+        <p className="paket-state-text">
+          {isDev && error?.message
+            ? error.message
+            : 'Terjadi masalah saat memuat halaman. Silakan coba lagi.'}
+        </p>
+        <button
+          className="paket-button paket-button--primary paket-state-button"
+          type="button"
+          onClick={this.handleReset}
+        >
+          <FiRefreshCw aria-hidden="true" />
+          Coba Lagi
+        </button>
+      </div>
+    );
   }
 }

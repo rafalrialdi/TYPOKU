@@ -7,6 +7,11 @@ frontend/.vite/
 backend/node_modules/
 backend/.env
 
+# SCRIPT UTILITAS LOKAL (jangan ikut deploy)
+backend/*-sub.js
+backend/sub.js
+backend/check-db.js
+
 # SYSTEM & ENVIRONMENT
 .DS_Store
 Thumbs.db

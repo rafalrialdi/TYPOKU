@@ -85,12 +85,94 @@ export function openSnap(token, callbacks = {}) {
     throw new Error('Snap Midtrans belum siap');
   }
 
-  window.snap.pay(token, callbacks);
+  let isTerminated = false;
+  let checkTimer = null;
+  let observer = null;
+
+  const cleanup = () => {
+    if (checkTimer) {
+      clearInterval(checkTimer);
+      checkTimer = null;
+    }
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+  };
+
+  const handleClose = () => {
+    if (isTerminated) return;
+    isTerminated = true;
+    cleanup();
+    callbacks.onClose?.();
+  };
+
+  const handleSuccess = (result) => {
+    isTerminated = true;
+    cleanup();
+    callbacks.onSuccess?.(result);
+  };
+
+  const handleError = (result) => {
+    isTerminated = true;
+    cleanup();
+    callbacks.onError?.(result);
+  };
+
+  const handlePending = (result) => {
+    callbacks.onPending?.(result);
+  };
+
+  window.snap.pay(token, {
+    ...callbacks,
+    onSuccess: handleSuccess,
+    onPending: handlePending,
+    onError: handleError,
+    onClose: handleClose,
+  });
+
+  // Watcher fallback: pastikan onClose dipanggil jika Midtrans snap.js tidak memicu event onClose
+  // Berikan jeda 800ms agar iframe sempat di-mount dan ditampilkan oleh snap.js
+  setTimeout(() => {
+    if (isTerminated) return;
+
+    checkTimer = setInterval(() => {
+      if (isTerminated) {
+        cleanup();
+        return;
+      }
+
+      const iframe = document.getElementById('snap-midtrans');
+      // Jika iframe sudah hilang dari DOM atau display === 'none', berarti popup telah tertutup
+      const isVisible =
+        iframe &&
+        iframe.style.display !== 'none' &&
+        document.body.contains(iframe);
+
+      if (!isVisible) {
+        handleClose();
+      }
+    }, 400);
+
+    const iframe = document.getElementById('snap-midtrans');
+    if (iframe && typeof MutationObserver !== 'undefined') {
+      observer = new MutationObserver(() => {
+        if (iframe.style.display === 'none' || !document.body.contains(iframe)) {
+          handleClose();
+        }
+      });
+      observer.observe(iframe, { attributes: true, attributeFilter: ['style', 'class'] });
+    }
+  }, 800);
 }
 
 export function hideSnap() {
   try {
     window.snap?.hide();
+    const iframe = document.getElementById('snap-midtrans');
+    if (iframe) {
+      iframe.style.display = 'none';
+    }
   } catch {
     // Abaikan jika popup sudah tertutup.
   }

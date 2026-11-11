@@ -10,12 +10,13 @@ async function forgotPassword(req, res) {
     const cleanEmail = (email || '').trim().toLowerCase();
 
     const [users] = await db.query(
-      'SELECT id, email, name, is_active FROM users WHERE email = ? LIMIT 1',
+      'SELECT id, email, name, (password_hash IS NOT NULL) AS has_password FROM users WHERE email = ? LIMIT 1',
       [cleanEmail]
     );
 
-    // Keamanan: selalu kirim respon sukses generik untuk mencegah account enumeration
-    if (users.length === 0 || !users[0].is_active) {
+    // Keamanan: selalu kirim respon sukses generik untuk mencegah account enumeration.
+    // Akun Google-only tidak punya kata sandi, jadi tidak perlu dikirimi tautan reset.
+    if (users.length === 0 || !users[0].has_password) {
       return sendSuccess(
         res,
         'Jika alamat email terdaftar, tautan pemulihan kata sandi telah dikirim ke kotak masuk Anda.'

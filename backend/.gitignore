@@ -1,3 +1,11 @@
-AGENTS.md
+# Dokumentasi (README tetap dilacak)
+*.md
+!README.md
+!readme.md
+
+# Environment & dependencies
 .env
 node_modules/
+
+# Log development
+dev.log

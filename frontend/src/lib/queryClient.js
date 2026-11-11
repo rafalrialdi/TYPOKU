@@ -1,13 +1,28 @@
 import { QueryClient, MutationCache } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { queryKeys } from './queryKeys';
 
 export const FIVE_MINUTES = 1000 * 60 * 5;
+export const THIRTY_MINUTES = 1000 * 60 * 30;
 
+/**
+ * Pengaturan cache global yang berlaku untuk SEMUA query.
+ *
+ * staleTime: data dianggap basi setelah 5 menit. Setelah itu, pemicu seperti
+ *            refetchOnMount / refetchOnWindowFocus / refetchOnReconnect akan
+ *            benar-benar memanggil ulang API. Sebelum 5 menit, data diambil
+ *            dari cache agar perpindahan halaman tidak memicu request berulang.
+ *
+ * gcTime:    cache dihapus dari memori 30 menit setelah query tidak dipakai
+ *            komponen mana pun. gcTime selalu LEBIH BESAR dari staleTime agar
+ *            tidak ada jendela waktu di mana data dianggap masih segar tetapi
+ *            cache-nya sudah dibuang (yang menyebabkan fetch sia-sia).
+ */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: Infinity,
-      gcTime: FIVE_MINUTES,
+      staleTime: FIVE_MINUTES,
+      gcTime: THIRTY_MINUTES,
     },
   },
   mutationCache: new MutationCache({
@@ -18,7 +33,14 @@ export const queryClient = new QueryClient({
           keys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))
         );
       }
-      return queryClient.invalidateQueries();
+
+      // Mutation tanpa meta.invalidates tidak lagi menandai SELURUH cache basi.
+      // Query yang bergantung pada identitas user saja yang diinvalidasi, agar
+      // 'packages' dan 'payment-config' tidak ikut di-fetch ulang tanpa alasan.
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.myAccess }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.myOrders }),
+      ]);
     },
   }),
 });
