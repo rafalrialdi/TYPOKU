@@ -109,34 +109,31 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/syarat-ketentuan" element={<SyaratKetentuan />} />
               <Route path="/kebijakan-privasi" element={<KebijakanPrivasi />} />
+              {/* Halaman fitur AI dapat dibuka tanpa login. Tamu melihat
+                  pratinjau "fitur terkunci" dan ajakan berlangganan, bukan
+                  dialihkan paksa ke /login. */}
               <Route
                 path="/cek-typo"
                 element={
-                  <RequireAuth>
-                    <RouteWithQueryBoundary fallback={<CekTypoSkeleton />}>
-                      <CekTypo />
-                    </RouteWithQueryBoundary>
-                  </RequireAuth>
+                  <RouteWithQueryBoundary fallback={<CekTypoSkeleton />}>
+                    <CekTypo />
+                  </RouteWithQueryBoundary>
                 }
               />
               <Route
                 path="/parafrase"
                 element={
-                  <RequireAuth>
-                    <RouteWithQueryBoundary fallback={<ParafraseSkeleton />}>
-                      <Parafrase />
-                    </RouteWithQueryBoundary>
-                  </RequireAuth>
+                  <RouteWithQueryBoundary fallback={<ParafraseSkeleton />}>
+                    <Parafrase />
+                  </RouteWithQueryBoundary>
                 }
               />
               <Route
                 path="/terjemah"
                 element={
-                  <RequireAuth>
-                    <RouteWithQueryBoundary fallback={<TerjemahSkeleton />}>
-                      <Terjemah />
-                    </RouteWithQueryBoundary>
-                  </RequireAuth>
+                  <RouteWithQueryBoundary fallback={<TerjemahSkeleton />}>
+                    <Terjemah />
+                  </RouteWithQueryBoundary>
                 }
               />
               <Route

@@ -1,5 +1,23 @@
 const nodemailer = require('nodemailer');
 
+/**
+ * Pengiriman email TypoKu mendukung dua jalur:
+ *
+ * 1. Brevo HTTP API (port 443) — dipakai bila BREVO_API_KEY tersedia.
+ *    Jalur ini menembus pemblokiran port SMTP pada hosting gratis
+ *    (mis. Render free tier memblokir 25/465/587).
+ * 2. SMTP via Nodemailer — fallback untuk pengembangan lokal.
+ *
+ * Pemanggil (passwordResetController) hanya mengenal sendPasswordResetEmail,
+ * sehingga bentuk implementasi di dalam file ini bebas berubah.
+ */
+
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+
+const brevoApiKey = (process.env.BREVO_API_KEY || '').trim();
+const mailFromEmail = (process.env.MAIL_FROM_EMAIL || '').trim();
+const mailFromName = (process.env.MAIL_FROM_NAME || 'TypoKu').replace(/"/g, '').trim();
+
 const transporter = nodemailer.createTransport({
   host: (process.env.SMTP_HOST || 'smtp.gmail.com').trim(),
   port: parseInt((process.env.SMTP_PORT || '587').toString().trim(), 10),
@@ -13,14 +31,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-async function sendPasswordResetEmail(toEmail, resetUrl) {
-  const mailFrom = (process.env.MAIL_FROM || 'TypoKu <no-reply@typoku.id>').replace(/"/g, '').trim();
-
-  const mailOptions = {
-    from: mailFrom,
-    to: toEmail,
-    subject: 'Pemulihan Kata Sandi TypoKu',
-    html: `
+function buildResetEmailHtml(resetUrl) {
+  return `
       <div style="font-family: Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;">
         <div style="text-align: center; margin-bottom: 24px;">
           <h2 style="color: #4f46e5; margin: 0; font-size: 24px; font-weight: 800;">TypoKu</h2>
@@ -43,10 +55,64 @@ async function sendPasswordResetEmail(toEmail, resetUrl) {
           TypoKu &bull; Platform AI untuk Penulisan Skripsi &amp; Jurnal Bereputasi
         </p>
       </div>
-    `,
-  };
+    `;
+}
 
-  return transporter.sendMail(mailOptions);
+async function sendViaBrevo({ toEmail, subject, html }) {
+  if (!mailFromEmail) {
+    throw new Error('MAIL_FROM_EMAIL belum diisi. Isi dengan alamat pengirim yang sudah diverifikasi di Brevo.');
+  }
+
+  const response = await fetch(BREVO_API_URL, {
+    method: 'POST',
+    headers: {
+      'api-key': brevoApiKey,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: mailFromName, email: mailFromEmail },
+      to: [{ email: toEmail }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+
+  if (!response.ok) {
+    let detail = '';
+    try {
+      detail = await response.text();
+    } catch {
+      detail = 'tanpa detail';
+    }
+    throw new Error(`Brevo gagal mengirim email (HTTP ${response.status}): ${detail}`);
+  }
+
+  return response.json();
+}
+
+async function sendViaSmtp({ toEmail, subject, html }) {
+  const mailFrom = (process.env.MAIL_FROM || `TypoKu <${mailFromEmail || 'no-reply@typoku.id'}>`)
+    .replace(/"/g, '')
+    .trim();
+
+  return transporter.sendMail({
+    from: mailFrom,
+    to: toEmail,
+    subject,
+    html,
+  });
+}
+
+async function sendPasswordResetEmail(toEmail, resetUrl) {
+  const subject = 'Pemulihan Kata Sandi TypoKu';
+  const html = buildResetEmailHtml(resetUrl);
+
+  if (brevoApiKey) {
+    return sendViaBrevo({ toEmail, subject, html });
+  }
+
+  return sendViaSmtp({ toEmail, subject, html });
 }
 
 module.exports = {

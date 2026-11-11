@@ -207,12 +207,17 @@ GOOGLE_CLIENT_ID=xxxxxxxxxxxx.apps.googleusercontent.com
 # Reset kata sandi
 RESET_TOKEN_TTL_MINUTES=60
 
-# Email (SMTP)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=alamat@gmail.com
-SMTP_PASS=app-password
-MAIL_FROM="TypoKu <alamat@gmail.com>"
+# Email (Brevo HTTP API — jalur utama)
+BREVO_API_KEY=xkeysib-xxxxxxxxxxxxxxxx
+MAIL_FROM_EMAIL=alamat@domain-anda.com
+MAIL_FROM_NAME=TypoKu
+
+# Email (SMTP — fallback lokal, hanya dipakai bila BREVO_API_KEY kosong)
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=alamat@gmail.com
+# SMTP_PASS=app-password
+# MAIL_FROM="TypoKu <alamat@gmail.com>"
 
 # Gemini AI
 GEMINI_API_KEY=AIza...
@@ -247,11 +252,14 @@ ADMIN_FEE=700
 | `JWT_EXPIRES_IN` | Tidak | `7d` | Masa berlaku token login. |
 | `GOOGLE_CLIENT_ID` | Ya (login Google) | — | Client ID OAuth Google. Harus sama dengan frontend. |
 | `RESET_TOKEN_TTL_MINUTES` | Tidak | `60` | Masa berlaku token reset kata sandi (menit). |
-| `SMTP_HOST` | Ya (reset password) | — | Host SMTP. |
-| `SMTP_PORT` | Tidak | `587` | Port SMTP. |
-| `SMTP_USER` | Ya | — | Akun SMTP. |
-| `SMTP_PASS` | Ya | — | Kata sandi/app password SMTP. |
-| `MAIL_FROM` | Tidak | — | Nama dan alamat pengirim email. |
+| `BREVO_API_KEY` | Ya (reset password) | - | API key Brevo. Jika diisi, email dikirim lewat HTTP API (port 443) sehingga tembus hosting yang memblokir SMTP. |
+| `MAIL_FROM_EMAIL` | Ya (jika pakai Brevo) | - | Alamat pengirim. **Wajib** sudah diverifikasi di Brevo (Senders & Domains). |
+| `MAIL_FROM_NAME` | Tidak | `TypoKu` | Nama pengirim yang tampil di kotak masuk penerima. |
+| `SMTP_HOST` | Tidak | `smtp.gmail.com` | Host SMTP. Hanya dipakai bila `BREVO_API_KEY` kosong. |
+| `SMTP_PORT` | Tidak | `587` | Port SMTP fallback. Port `465` memakai koneksi secure. |
+| `SMTP_USER` | Tidak | - | Akun SMTP fallback. |
+| `SMTP_PASS` | Tidak | - | Kata sandi/app password SMTP fallback. |
+| `MAIL_FROM` | Tidak | - | Nama dan alamat pengirim untuk jalur SMTP fallback. |
 | `GEMINI_API_KEY` | Ya | — | API key Google Gemini. |
 | `GEMINI_MODEL` | Tidak | `gemini-3.8-flash` | Model utama. |
 | `GEMINI_MODEL_FALLBACKS` | Tidak | lihat contoh | Daftar model cadangan, dipisah koma. |
@@ -528,7 +536,7 @@ Di Google Cloud Console:
 ## Catatan Keamanan
 
 - File `.env` **tidak boleh** di-commit. Pastikan hanya `.env.example` (tanpa nilai rahasia) yang masuk repositori.
-- `MIDTRANS_SERVER_KEY`, `GEMINI_API_KEY`, `JWT_SECRET`, dan `SMTP_PASS` bersifat rahasia — jangan pernah ditaruh di frontend.
+- `MIDTRANS_SERVER_KEY`, `GEMINI_API_KEY`, `JWT_SECRET`, `BREVO_API_KEY`, dan `SMTP_PASS` bersifat rahasia - jangan pernah ditaruh di frontend.
 - `VITE_*` akan terlihat publik di bundle. Hanya isi dengan nilai yang memang publik (URL API dan Client ID OAuth).
 - Autentikasi memakai **Bearer JWT** di header `Authorization`, bukan cookie. Karena itu CORS tidak mengaktifkan `credentials`.
 - Rate limit aktif untuk request umum, login, lupa password, dan pembuatan order.
