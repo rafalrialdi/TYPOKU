@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fi';
 import Skeleton from '../components/Skeleton';
 import { Toast, useToast } from '../components/Toast';
+import { useAuth } from '../context/AuthContext';
 import { useMyAccess } from '../hooks/useMyAccess';
 import { api } from '../lib/api';
 import { toHumanReadableError } from '../utils/humanizeError';
@@ -46,8 +47,14 @@ export function CekTypoSkeleton() {
 }
 
 export default function CekTypo() {
-  const { data: accessData } = useMyAccess();
+  const { user } = useAuth();
+  const { data: accessData, isError: isAccessError } = useMyAccess();
   const hasAccess = Boolean(accessData?.hasAccess);
+
+  // Hanya user login yang datanya belum pernah masuk (fetch pertama) yang
+  // melihat skeleton. Tamu selalu false karena `user` bernilai null, sehingga
+  // langsung melihat kartu "fitur terkunci" tanpa kedipan loading.
+  const isAccessLoading = Boolean(user) && accessData === undefined && !isAccessError;
 
   const { toast, showToast } = useToast();
   const fileInputRef = useRef(null);
@@ -199,6 +206,11 @@ export default function CekTypo() {
     handleClearFile();
     setTextInput('');
     setBackendError('');
+  }
+
+  // Diletakkan setelah seluruh hook dideklarasikan agar urutan hook stabil.
+  if (isAccessLoading) {
+    return <CekTypoSkeleton />;
   }
 
   return (
