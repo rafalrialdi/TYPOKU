@@ -67,7 +67,10 @@ export function CheckoutSkeleton() {
   );
 }
 
-function PendingOrderGate({ orderCode, onResolved, onInvalid }) {
+function PendingOrderGate({ orderCode, onResolved, onPaid, onExpired, onInvalid }) {
+  // staleTime 0 + refetch saat mount wajib: cache global memakai staleTime Infinity
+  // dan dipersist ke localStorage, sehingga status pending lama bisa terbaca ulang
+  // padahal order sudah lunas atau kedaluwarsa.
   const { data } = useSuspenseQuery({
     queryKey: queryKeys.orderByCode(orderCode),
     queryFn: () =>
@@ -75,19 +78,35 @@ function PendingOrderGate({ orderCode, onResolved, onInvalid }) {
         auth: true,
       }),
     select: (res) => res?.data,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   useEffect(() => {
-    if (data?.can_reopen && data?.order?.status === 'pending') {
+    const status = data?.order?.status;
+    const orderCodeFromData = data?.order?.order_code;
+
+    if (status === 'paid') {
+      onPaid?.(orderCodeFromData);
+      return;
+    }
+
+    if (data?.can_reopen && status === 'pending') {
       onResolved({
-        order_code: data.order.order_code,
+        order_code: orderCodeFromData,
         snap_token: data.snap_token,
         client_key: data.client_key,
       });
-    } else {
-      onInvalid();
+      return;
     }
-  }, [data, onResolved, onInvalid]);
+
+    if (status === 'expired' || status === 'failed' || status === 'cancelled') {
+      onExpired?.(orderCodeFromData);
+      return;
+    }
+
+    onInvalid();
+  }, [data, onResolved, onPaid, onExpired, onInvalid]);
 
   return null;
 }
@@ -103,6 +122,7 @@ export default function Checkout() {
   const [paymentError, setPaymentError] = useState('');
   const [paying, setPaying] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState(null);
+  const [awaitingPayment, setAwaitingPayment] = useState(false);
 
   const [storedOrderCode] = useState(() => {
     try {
@@ -162,6 +182,7 @@ export default function Checkout() {
 
     payingRef.current = true;
     setPaymentError('');
+    setAwaitingPayment(false);
     redirectedRef.current = false;
 
     try {
@@ -202,9 +223,12 @@ export default function Checkout() {
           setPaymentError('Pembayaran gagal diproses. Silakan coba lagi.');
         },
         onClose: () => {
-          // Popup ditutup: reset status tombol agar bisa ditekan lagi & polling tetap jalan
+          // Polling sengaja TIDAK dihentikan di sini. Order masih berlaku 15 menit dan
+          // QRIS bisa dipindai dari HP setelah popup ditutup. Hook akan menghentikan
+          // dirinya sendiri saat status paid/expired/failed atau saat komponen unmount.
           payingRef.current = false;
           setPaying(false);
+          setAwaitingPayment(true);
           if (redirectedRef.current) return;
           showToast('Popup ditutup. Status pembayaran tetap dipantau otomatis.');
         },
@@ -242,6 +266,8 @@ export default function Checkout() {
           <PendingOrderGate
             orderCode={storedOrderCode}
             onResolved={handlePendingResolved}
+            onPaid={(code) => redirectOnce(`/pembayaran/lunas/${code}`)}
+            onExpired={(code) => redirectOnce(`/pembayaran/expired/${code}`)}
             onInvalid={handlePendingInvalid}
           />
         </QueryBoundary>
@@ -404,6 +430,12 @@ export default function Checkout() {
               <p className="checkout-pay-note">
                 Aktivasi langsung otomatis dalam 10 detik setelah pembayaran berhasil
               </p>
+
+              {awaitingPayment && !paying ? (
+                <p className="checkout-pay-note" role="status">
+                  Menunggu pembayaran… halaman ini otomatis beralih saat pembayaran terdeteksi.
+                </p>
+              ) : null}
 
               {pendingOrder ? (
                 <p className="checkout-order-code">
