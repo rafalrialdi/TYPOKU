@@ -19,6 +19,10 @@ Dokumen ini menjelaskan cara menjalankan proyek, seluruh variabel lingkungan yan
 - [Struktur Database](#struktur-database)
 - [Deploy](#deploy)
 - [Catatan Keamanan](#catatan-keamanan)
+- [Menjalankan dengan Docker (opsional)](#menjalankan-dengan-docker-opsional)
+- [Alur Pembayaran](#alur-pembayaran)
+  - [Endpoint pembayaran](#endpoint-pembayaran)
+  - [Pindah dari Sandbox ke Production](#pindah-dari-sandbox-ke-production)
 
 ---
 
@@ -31,7 +35,7 @@ Dokumen ini menjelaskan cara menjalankan proyek, seluruh variabel lingkungan yan
 | **Terjemah** | Menerjemahkan naskah akademik dua arah (Indonesia ↔ Inggris). |
 | **Unduh Hasil** | Hasil pemeriksaan/parafrase dapat diunduh sebagai PDF atau TXT. |
 | **Akun** | Registrasi email + kata sandi, login Google, reset kata sandi lewat email. |
-| **Langganan** | Paket Cepat/Pro/Pro Plus, pembayaran Midtrans (QRIS, DANA, OVO). |
+| **Langganan** | Paket Cepat/Pro/Pro Plus, pembayaran Midtrans Snap dengan **QRIS** (kanal tunggal). |
 | **Halaman Legal** | Syarat & Ketentuan dan Kebijakan Privasi (publik, tanpa login). |
 
 ---
@@ -91,9 +95,11 @@ typoku/
 │   ├── utils/                   # Mailer, Midtrans, token, response
 │   ├── ca.pem                   # CA untuk TLS database
 │   ├── .env                     # Variabel lingkungan backend (tidak di-commit)
+│   ├── Dockerfile               # Image backend
 │   ├── package.json
 │   └── server.js                # Entry point Express
 │
+├── docker-compose.yml           # Orkestrasi backend + frontend lokal
 ├── .gitignore
 └── readme.md
 ```
@@ -231,7 +237,7 @@ GEMINI_TEXT_TIMEOUT_MS=30000
 MIDTRANS_SERVER_KEY=SB-Mid-server-xxxxxxxx
 MIDTRANS_CLIENT_KEY=SB-Mid-client-xxxxxxxx
 MIDTRANS_IS_PRODUCTION=false
-PAYMENT_METHODS=qris,dana,ovo
+PAYMENT_METHODS=qris
 PAYMENT_RECONCILE_MINUTES=60
 ADMIN_FEE=700
 ```
@@ -269,7 +275,7 @@ ADMIN_FEE=700
 | `MIDTRANS_SERVER_KEY` | Ya | — | Server key Midtrans (rahasia). |
 | `MIDTRANS_CLIENT_KEY` | Ya | — | Client key Midtrans. |
 | `MIDTRANS_IS_PRODUCTION` | Tidak | `false` | `false` = Sandbox, `true` = produksi. |
-| `PAYMENT_METHODS` | Tidak | `qris,dana,ovo` | Metode pembayaran yang diaktifkan. |
+| `PAYMENT_METHODS` | Tidak | `qris` | Whitelist metode pembayaran (dipisah koma). Aplikasi hanya memakai `qris`; nilai ini dipetakan ke `enabled_payments: ["other_qris"]`. Metode di luar daftar ditolak HTTP 400. |
 | `PAYMENT_RECONCILE_MINUTES` | Tidak | `60` | Jendela rekonsiliasi pembayaran (menit). |
 | `ADMIN_FEE` | Tidak | `700` | Biaya admin tetap per transaksi (Rupiah). |
 
@@ -541,3 +547,66 @@ Di Google Cloud Console:
 - Autentikasi memakai **Bearer JWT** di header `Authorization`, bukan cookie. Karena itu CORS tidak mengaktifkan `credentials`.
 - Rate limit aktif untuk request umum, login, lupa password, dan pembuatan order.
 - Webhook Midtrans diverifikasi dengan signature SHA-512 sebelum mengubah status pembayaran.
+
+---
+
+## Menjalankan dengan Docker (opsional)
+
+Repositori menyertakan konfigurasi Docker untuk menjalankan frontend dan backend sekaligus:
+
+```bash
+docker compose up -d --build --force-recreate
+```
+
+| Layanan | Alamat |
+|---|---|
+| Frontend (`vite preview`) | `http://localhost:4173` |
+| Backend (Express) | `http://localhost:8000` |
+
+Frontend dibangun sebagai berkas statis, sehingga perubahan di `frontend/src` **wajib** disertai `docker compose build frontend`; `restart` saja tidak cukup. Nilai `VITE_API_BASE_URL` dan `VITE_GOOGLE_CLIENT_ID` dibakar ke bundle saat build melalui `build.args` di `docker-compose.yml`.
+
+---
+
+## Alur Pembayaran
+
+TypoKu hanya memakai kanal **QRIS**:
+
+1. Frontend meminta pembuatan pesanan ke `POST /api/orders`.
+2. Backend membuat transaksi Snap dengan `enabled_payments: ["other_qris"]` dan masa berlaku 15 menit.
+3. Frontend memuat `snap.js` lalu menampilkan popup QRIS.
+4. Setelah QR dipindai, Midtrans mengirim webhook yang mengubah status pesanan menjadi `paid` di database.
+5. Frontend membaca status melalui `GET /api/payments/status/:orderCode` setiap 5 detik, lalu mengarahkan pengguna ke halaman berhasil.
+
+Pemantauan status **tetap berjalan setelah popup ditutup**, karena QRIS biasanya dipindai dari ponsel. Jika pengguna menutup tab lalu kembali, halaman checkout memeriksa ulang status pesanan sehingga pesanan yang sudah lunas langsung diarahkan ke halaman berhasil.
+
+### Endpoint pembayaran
+
+| Endpoint | Keterangan |
+|---|---|
+| `POST /api/orders` | Membuat pesanan + Snap token. Body: `packageId`, `paymentMethod` (`qris`). |
+| `GET /api/orders/:orderCode` | Detail pesanan + `can_reopen`, `snap_token`, `client_key` saat `pending`. |
+| `GET /api/orders/my` | Riwayat transaksi pengguna. |
+| `GET /api/payments/config` | `{ admin_fee, payment_methods, midtrans_is_production }` (publik). |
+| `GET /api/payments/status/:orderCode` | Status terkini untuk polling frontend. |
+| `POST /api/payments/notification` | Webhook Midtrans. |
+
+Status pesanan: `pending`, `paid`, `expired`, `cancelled`, `failed`.
+
+### Pindah dari Sandbox ke Production
+
+| Langkah | Keterangan |
+|---|---|
+| 1. Buat kunci production | Dashboard Midtrans → Settings → Access Keys → General Credentials |
+| 2. Aktifkan kanal QRIS | Settings → Payment Methods → GoPay Dynamic QRIS, tunggu sampai **Active** |
+| 3. Isi rekening pencairan | Settings → Withdrawal |
+| 4. Daftarkan Notification URL | `https://<domain-backend>/api/payments/notification` |
+| 5. Isi Finish Redirect URL | `https://<domain-frontend>/paket` |
+| 6. Ubah environment backend | `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_IS_PRODUCTION=true`, `PAYMENT_METHODS=qris` |
+
+Frontend **tidak perlu diubah** dan tidak perlu di-rebuild: `client_key` serta `midtrans_is_production` dikirim backend melalui response API. Tidak ada `VITE_MIDTRANS_*`.
+
+Karena cache TanStack Query dipersist ke `localStorage` dengan `staleTime: Infinity`, pengguna lama sebaiknya logout lalu login (atau memakai jendela incognito) agar konfigurasi sandbox lama tidak terpakai.
+
+Verifikasi di DevTools: `snap.js` harus dimuat dari `app.midtrans.com`, dan `data-client-key` pada elemen `#midtrans-snap-script` harus diawali `Mid-client-`.
+
+---
