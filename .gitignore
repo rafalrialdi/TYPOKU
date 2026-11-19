@@ -19,9 +19,10 @@ Thumbs.db
 .env.local
 .vscode/
 *.log
+
 # DOKUMENTASI
-# Hanya readme.md di root yang dipublikasikan. Seluruh file .md lain tetap
-# tersimpan di perangkat lokal tetapi tidak dilacak git.
+# Hanya readme.md di root yang dipublikasikan. Garis miring di depan (/) membatasi
+# pengecualian hanya untuk folder root, sehingga README.md di subfolder tetap diabaikan.
 *.md
-!readme.md
-!README.md
+!/readme.md
+!/README.md
