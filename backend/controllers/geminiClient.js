@@ -170,9 +170,9 @@ async function generateStructuredContent({ contents, config = {}, timeoutMs = 30
   throw normalizeError(lastError, timedOut);
 }
 
+// Hanya generateStructuredContent yang dipakai modul lain (typoController,
+// terjemahController, parafraseController). getClient, MODEL, dan MODEL_FALLBACKS
+// adalah detail internal rantai fallback model.
 module.exports = {
-  getClient,
-  MODEL,
-  MODEL_FALLBACKS,
   generateStructuredContent,
 };

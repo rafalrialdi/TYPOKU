@@ -41,8 +41,11 @@ const upload = multer({
 
 router.post('/', authenticate, checkSubscription, upload.single('file'), cekTypo);
 router.post('/parafrase', authenticate, checkSubscription, upload.single('file'), parafraseTypo);
+
+// Unduhan sengaja publik (tanpa authenticate) agar tautan hasil pemeriksaan bisa
+// dibuka langsung dari browser tanpa header Authorization. Berkas hanya diambil
+// dari downloadStore berdasarkan id, bukan dari teks bebas di request body.
 router.get('/download/:id', downloadResult);
 router.get('/download', downloadResult);
-router.post('/download', downloadResult);
 
 module.exports = router;

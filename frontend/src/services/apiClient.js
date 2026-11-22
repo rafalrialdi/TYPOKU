@@ -1,10 +1,41 @@
-const API_BASE_URL = (import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8000').replace(
-  /\/$/,
-  ''
-);
-
 import { clearSession, getToken } from './session';
 import { clearPersistedCache } from '../lib/queryClient';
+
+// Diekspor agar halaman bisa menyusun URL unduhan/aset langsung ke backend.
+// Backend hanya mengirim path relatif (mis. /api/cek-typo/download/<id>) karena
+// alamat publik backend tidak dapat ditebak dari sisi server saat di balik proxy.
+export const API_BASE_URL = (
+  import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8000'
+).replace(/\/$/, '');
+
+// Halaman yang memang mewajibkan login. Dipakai untuk memutuskan apakah 401
+// perlu memaksa redirect ke /login.
+const PROTECTED_PREFIXES = ['/checkout', '/pembayaran'];
+
+/**
+ * Mengarahkan ke /login HANYA jika halaman saat ini memang butuh sesi.
+ *
+ * Sejak profil direvalidasi lewat /api/auth/me setiap aplikasi dibuka, token
+ * kedaluwarsa bisa ketahuan saat pengunjung sedang berada di halaman publik
+ * (beranda, /paket, /cek-typo). Tanpa penjagaan ini, pengunjung yang sah-sah
+ * saja membuka halaman publik akan terlempar ke /login — padahal halaman itu
+ * sengaja dapat diakses tanpa akun. Di halaman publik, sesi cukup dibersihkan
+ * dan pengunjung berubah menjadi tamu.
+ */
+function redirectToLoginIfProtected() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const { pathname, search } = window.location;
+
+  if (!PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return;
+  }
+
+  const redirect = encodeURIComponent(`${pathname}${search}`);
+  window.location.href = `/login?redirect=${redirect}`;
+}
 
 async function request(path, { method = 'GET', body, auth = false, headers, signal, cache } = {}) {
   const isGet = method === 'GET';
@@ -46,9 +77,7 @@ async function request(path, { method = 'GET', body, auth = false, headers, sign
   if (response.status === 401 && auth) {
     clearSession();
     clearPersistedCache();
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
-    }
+    redirectToLoginIfProtected();
     return Promise.reject({ status: 401, redirected: true });
   }
 
@@ -73,22 +102,9 @@ async function request(path, { method = 'GET', body, auth = false, headers, sign
   return data;
 }
 
-function registerUser(payload) {
-  return request('/api/auth/register', {
-    method: 'POST',
-    body: payload,
-    auth: false,
-  });
-}
-
-function loginUser(payload) {
-  return request('/api/auth/login', {
-    method: 'POST',
-    body: payload,
-    auth: false,
-  });
-}
-
+// Satu-satunya helper auth yang dipakai di luar request(): Login Google.
+// Alur register, login, lupa kata sandi, reset kata sandi, dan profil semuanya
+// sudah lewat hook TanStack Query (useAuthMutations) yang memanggil api().
 function googleLogin(credential) {
   return request('/api/auth/google', {
     method: 'POST',
@@ -97,48 +113,4 @@ function googleLogin(credential) {
   });
 }
 
-function getCurrentUser() {
-  return request('/api/auth/me', {
-    auth: true,
-  });
-}
-
-function requestPasswordReset(email) {
-  return request('/api/auth/forgot-password', {
-    method: 'POST',
-    body: { email },
-    auth: false,
-  });
-}
-
-function verifyResetToken(token) {
-  return request(`/api/auth/reset-password/verify?token=${encodeURIComponent(token)}`, {
-    auth: false,
-  });
-}
-
-function resetPassword(payload) {
-  return request('/api/auth/reset-password', {
-    method: 'POST',
-    body: payload,
-    auth: false,
-  });
-}
-
-function getMyAccess() {
-  return request('/api/subscriptions/my-access', {
-    auth: true,
-  });
-}
-
-export {
-  getCurrentUser,
-  getMyAccess,
-  googleLogin,
-  loginUser,
-  registerUser,
-  request,
-  requestPasswordReset,
-  resetPassword,
-  verifyResetToken,
-};
+export { googleLogin, request };

@@ -81,29 +81,6 @@ button[aria-busy='true'] {
   }
 }
 
-.skeleton-text {
-  height: 1em;
-  margin-bottom: 8px;
-}
-
-.skeleton-title {
-  height: 1.5em;
-  width: 60%;
-  margin-bottom: 12px;
-}
-
-.skeleton-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-}
-
-.skeleton-image {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 8px;
-}
-
 /* ErrorBoundary default fallback (global, self-contained) */
 .paket-state--error {
   max-width: 32rem;

@@ -116,6 +116,5 @@ async function sendPasswordResetEmail(toEmail, resetUrl) {
 }
 
 module.exports = {
-  transporter,
   sendPasswordResetEmail,
 };

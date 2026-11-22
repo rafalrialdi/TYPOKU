@@ -35,13 +35,6 @@ function countWords(text) {
   return trimmed ? trimmed.split(/\s+/).length : 0;
 }
 
-function stripHtml(html) {
-  return String(html || '')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 export function TerjemahSkeleton() {
   return (
     <div className="terjemah-page">
@@ -130,6 +123,13 @@ export default function Terjemah() {
       return;
     }
 
+    // Backend menolak pasangan bahasa yang sama dengan 400. Dicek di sini agar
+    // pengguna mendapat pesan jelas tanpa menunggu request ke server.
+    if (sourceLang === targetLang) {
+      showToast('Bahasa sumber dan bahasa sasaran tidak boleh sama.');
+      return;
+    }
+
     setError('');
     setLoading(true);
 
@@ -152,7 +152,8 @@ export default function Terjemah() {
   async function handleCopy() {
     if (!result) return;
 
-    const copySource = result.result_text || stripHtml(result.result_text);
+    // Hasil terjemahan berupa teks biasa (bukan HTML), jadi cukup disalin apa adanya.
+    const copySource = result.result_text || '';
     if (!copySource) return;
 
     try {
@@ -391,10 +392,10 @@ export default function Terjemah() {
                       <p>Menerjemahkan...</p>
                     </div>
                   ) : result ? (
-                    <div
-                      className="terjemah-result-content"
-                      dangerouslySetInnerHTML={{ __html: result.result_text || '' }}
-                    />
+                    // Hasil terjemahan adalah teks biasa dari Gemini, bukan HTML.
+                    // Dirender sebagai teks agar markup apa pun dari model tidak
+                    // dieksekusi browser (XSS). Spasi baris dijaga lewat CSS.
+                    <div className="terjemah-result-content">{result.result_text}</div>
                   ) : (
                     <div className="terjemah-result-empty">
                       <FiEdit3 aria-hidden="true" />

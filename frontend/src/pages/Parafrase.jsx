@@ -362,7 +362,7 @@ export default function Parafrase() {
                     <div
                       className="parafrase-result-content"
                       dangerouslySetInnerHTML={{
-                        __html: result.result_text || result.clean_result_text,
+                        __html: result.result_text || '',
                       }}
                     />
                   ) : (

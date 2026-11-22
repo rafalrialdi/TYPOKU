@@ -90,16 +90,15 @@ function saveDownloadableResult(data) {
   return id;
 }
 
-function getDownloadUrls(req, id) {
-  const host = req.get('host') || 'localhost:8000';
-  const protocol = req.protocol || 'http';
-  const baseUrl = `${protocol}://${host}/api/cek-typo/download/${id}`;
+function getDownloadUrls(id) {
+  // Sengaja hanya path relatif. URL absolut TIDAK dibentuk di sini karena
+  // req.get('host') berisi host internal ketika backend berjalan di balik proxy
+  // (Render, Docker, ngrok), sehingga tautan yang dihasilkan menunjuk ke alamat
+  // yang tidak bisa diakses browser. Frontend menyusun URL lengkap dari
+  // VITE_API_BASE_URL — satu-satunya sumber kebenaran alamat API.
   return {
     download_id: id,
     download_url: `/api/cek-typo/download/${id}?format=pdf`,
-    download_link: `${baseUrl}?format=pdf`,
-    download_pdf: `${baseUrl}?format=pdf`,
-    download_txt: `${baseUrl}?format=txt`,
   };
 }
 
@@ -145,10 +144,6 @@ function stripCodeFence(text = '') {
   }
 
   return value.trim();
-}
-
-function stripHtmlTags(html = '') {
-  return html.replace(/<[^>]*>/g, '').trim();
 }
 
 function parseGeminiJsonResponse(rawText) {
@@ -309,7 +304,7 @@ ${chunk}
       type: 'koreksi_typo',
     });
 
-    const downloadInfo = getDownloadUrls(req, downloadId);
+    const downloadInfo = getDownloadUrls(downloadId);
 
     return res.json({
       status: 'success',
@@ -411,7 +406,7 @@ ${teks}
       style,
     });
 
-    const downloadInfo = getDownloadUrls(req, downloadId);
+    const downloadInfo = getDownloadUrls(downloadId);
 
     return res.json({
       status: 'success',
@@ -443,15 +438,12 @@ async function downloadResult(req, res) {
     const id = req.params.id || req.query.id;
     const format = (req.query.format || (req.body && req.body.format) || 'pdf').toLowerCase();
 
-    let item = id ? downloadStore.get(id) : null;
-
-    if (!item && req.body && req.body.text) {
-      item = {
-        filename: req.body.filename || 'hasil_pemeriksaan',
-        content: req.body.text,
-        type: req.body.type || 'dokumen',
-      };
-    }
+    // Endpoint ini publik (tanpa authenticate) agar tautan unduhan bisa dipakai
+    // tanpa header Authorization. Karena itu isi berkas HANYA boleh berasal dari
+    // downloadStore yang dibuat oleh proses cek typo/parafrase, bukan dari teks
+    // bebas di request body. Kalau tidak, siapa pun bisa memakai server untuk
+    // membuat PDF/TXT sembarang tanpa login.
+    const item = id ? downloadStore.get(id) : null;
 
     if (!item) {
       return res.status(404).json({
@@ -496,8 +488,4 @@ module.exports = {
   cekTypo,
   parafraseTypo,
   downloadResult,
-  HIGHLIGHT_STYLE,
-  ERROR_STYLE,
-  sanitizeHtml,
-  splitTextIntoChunks,
 };

@@ -22,18 +22,41 @@ const socials = [
 ];
 
 const produk = [
-  ['Pemeriksa Ejaan PUEBI', '#'],
+  ['Pemeriksa Ejaan PUEBI', '/cek-typo'],
   ['Parafrase Cerdas', '/parafrase'],
   ['Penerjemah Akademik', '/terjemah'],
   ['Paket Langganan', '/paket'],
 ];
 
 const sumberDaya = [
-  ['Panduan Kaidah PUEBI', '#'],
-  ['Dokumentasi API', '#'],
-  ['Hubungi Tim Dukungan', '#'],
-  ['Standar Sitasi Ilmiah', '#'],
+  ['Panduan Kaidah PUEBI', 'https://ejaan.kemdikbud.go.id/'],
+  ['Hubungi Tim Dukungan', 'https://mail.google.com/mail/?view=cm&fs=1&to=rafalrialdi1@gmail.com'],
+  ['Kebijakan Privasi', '/kebijakan-privasi'],
+  ['Syarat & Ketentuan', '/syarat-ketentuan'],
 ];
+
+// Tautan internal memakai <Link> agar tidak memicu full page reload, sedangkan
+// tautan eksternal (http/https) tetap memakai <a> dan dibuka di tab baru.
+function FooterLink({ href, children }) {
+  if (href.startsWith('/')) {
+    return (
+      <Link to={href} className="footer-link">
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      className="footer-link"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {children}
+    </a>
+  );
+}
 
 export default function Footer() {
   return (
@@ -53,7 +76,7 @@ export default function Footer() {
             <ul className="footer-links">
               {produk.map(([label, href]) => (
                 <li key={label}>
-                  <a href={href} className="footer-link">{label}</a>
+                  <FooterLink href={href}>{label}</FooterLink>
                 </li>
               ))}
             </ul>
@@ -64,7 +87,7 @@ export default function Footer() {
             <ul className="footer-links">
               {sumberDaya.map(([label, href]) => (
                 <li key={label}>
-                  <a href={href} className="footer-link">{label}</a>
+                  <FooterLink href={href}>{label}</FooterLink>
                 </li>
               ))}
             </ul>

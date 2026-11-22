@@ -68,9 +68,9 @@ export function CheckoutSkeleton() {
 }
 
 function PendingOrderGate({ orderCode, onResolved, onPaid, onExpired, onInvalid }) {
-  // staleTime 0 + refetch saat mount wajib: cache global memakai staleTime Infinity
-  // dan dipersist ke localStorage, sehingga status pending lama bisa terbaca ulang
-  // padahal order sudah lunas atau kedaluwarsa.
+  // staleTime 0 + refetch saat mount wajib: cache global memakai staleTime 5 menit,
+  // sehingga status pending lama bisa terbaca ulang dari cache padahal order sudah
+  // lunas atau kedaluwarsa. Query ini harus selalu mencerminkan kondisi terkini.
   const { data } = useSuspenseQuery({
     queryKey: queryKeys.orderByCode(orderCode),
     queryFn: () =>
@@ -82,17 +82,26 @@ function PendingOrderGate({ orderCode, onResolved, onPaid, onExpired, onInvalid 
     refetchOnMount: 'always',
   });
 
+  // Callback disimpan di ref agar effect di bawah hanya bergantung pada `data`.
+  // Tanpa ini, prop berupa arrow function inline dari parent dibuat ulang setiap
+  // render sehingga effect ikut berjalan ulang; karena onResolved memanggil
+  // setPendingOrder dengan objek baru, siklus render -> effect -> setState ->
+  // render akan berputar tanpa henti.
+  const callbacksRef = useRef({ onResolved, onPaid, onExpired, onInvalid });
+  callbacksRef.current = { onResolved, onPaid, onExpired, onInvalid };
+
   useEffect(() => {
+    const callbacks = callbacksRef.current;
     const status = data?.order?.status;
     const orderCodeFromData = data?.order?.order_code;
 
     if (status === 'paid') {
-      onPaid?.(orderCodeFromData);
+      callbacks.onPaid?.(orderCodeFromData);
       return;
     }
 
     if (data?.can_reopen && status === 'pending') {
-      onResolved({
+      callbacks.onResolved({
         order_code: orderCodeFromData,
         snap_token: data.snap_token,
         client_key: data.client_key,
@@ -101,12 +110,12 @@ function PendingOrderGate({ orderCode, onResolved, onPaid, onExpired, onInvalid 
     }
 
     if (status === 'expired' || status === 'failed' || status === 'cancelled') {
-      onExpired?.(orderCodeFromData);
+      callbacks.onExpired?.(orderCodeFromData);
       return;
     }
 
-    onInvalid();
-  }, [data, onResolved, onPaid, onExpired, onInvalid]);
+    callbacks.onInvalid();
+  }, [data]);
 
   return null;
 }
@@ -124,7 +133,7 @@ export default function Checkout() {
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [awaitingPayment, setAwaitingPayment] = useState(false);
 
-  const [storedOrderCode] = useState(() => {
+  const [storedOrderCode, setStoredOrderCode] = useState(() => {
     try {
       const raw = sessionStorage.getItem(storageKey);
       if (!raw) return null;
@@ -145,6 +154,7 @@ export default function Checkout() {
 
   const handlePendingInvalid = useCallback(() => {
     sessionStorage.removeItem(storageKey);
+    setStoredOrderCode(null);
     setPendingOrder(null);
   }, [storageKey]);
 

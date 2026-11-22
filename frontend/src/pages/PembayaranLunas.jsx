@@ -246,7 +246,6 @@ export default function PembayaranLunas() {
   );
 
   async function handleCopy(value) {
-    showToast('Kamu mengklik: Rincian Ringkasan Transaksi');
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
@@ -258,6 +257,7 @@ export default function PembayaranLunas() {
       copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       setCopied(false);
+      showToast('Gagal menyalin ID pesanan. Silakan salin secara manual.');
     }
   }
 
@@ -391,10 +391,7 @@ export default function PembayaranLunas() {
               <button
                 className="payment-button"
                 type="button"
-                onClick={() => {
-                  showToast('Kamu mengklik: Pembayaran Sedang Diverifikasi');
-                  handleCheckStatus();
-                }}
+                onClick={handleCheckStatus}
               >
                 <FiRefreshCw aria-hidden="true" />
                 Cek Status Sekarang

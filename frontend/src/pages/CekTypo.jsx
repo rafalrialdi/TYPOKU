@@ -20,6 +20,7 @@ import { Toast, useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import { useMyAccess } from '../hooks/useMyAccess';
 import { api } from '../lib/api';
+import { API_BASE_URL } from '../services/apiClient';
 import { toHumanReadableError } from '../utils/humanizeError';
 import './cekTypo.css';
 
@@ -63,12 +64,12 @@ export default function CekTypo() {
   const [file, setFile] = useState(null);
   const [textInput, setTextInput] = useState('');
   const [isOverSize, setIsOverSize] = useState(false);
-  const [fileError, setFileError] = useState('');
   const [backendError, setBackendError] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(null);
 
   function validateAndSetFile(selectedFile) {
     if (!selectedFile) return;
@@ -78,9 +79,15 @@ export default function CekTypo() {
     const isValidFormat = ALLOWED_EXTENSIONS.some((ext) => filename.endsWith(ext));
 
     if (!isValidFormat) {
-      const err = 'Format file tidak didukung. Harap pilih berkas PDF, DOCX, atau TXT.';
-      setFileError(err);
-      showToast(err);
+      // Berkas lama harus ikut dibuang. Tanpa ini, memilih berkas dengan format
+      // salah setelah berkas valid akan tetap menampilkan berkas lama di preview
+      // seolah-olah berkas barulah yang dipakai.
+      setFile(null);
+      setIsOverSize(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      showToast('Format file tidak didukung. Harap pilih berkas PDF, DOCX, atau TXT.');
       return;
     }
 
@@ -90,12 +97,9 @@ export default function CekTypo() {
     // Validasi ukuran 5MB
     if (selectedFile.size > MAX_FILE_SIZE) {
       setIsOverSize(true);
-      const overMsg = 'Ukuran file melebihi batas maksimal 5 MB.';
-      setFileError(overMsg);
-      showToast(overMsg);
+      showToast('Ukuran file melebihi batas maksimal 5 MB.');
     } else {
       setIsOverSize(false);
-      setFileError('');
     }
   }
 
@@ -124,7 +128,6 @@ export default function CekTypo() {
   function handleClearFile() {
     setFile(null);
     setIsOverSize(false);
-    setFileError('');
     setBackendError('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -143,9 +146,7 @@ export default function CekTypo() {
 
       // Validasi ketat frontend: tombol tidak bisa memproses jika > 5MB
       if (isOverSize || file.size > MAX_FILE_SIZE) {
-        const overMsg = 'Ukuran file melebihi batas maksimal 5 MB.';
-        showToast(overMsg);
-        setFileError(overMsg);
+        showToast('Ukuran file melebihi batas maksimal 5 MB.');
         return;
       }
     } else {
@@ -198,6 +199,49 @@ export default function CekTypo() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       showToast('Gagal menyalin naskah.');
+    }
+  }
+
+  /**
+   * Mengunduh hasil sebagai blob, bukan lewat <a href> ke backend.
+   *
+   * Dua alasan:
+   * 1. Tautan unduhan hanya valid 60 menit dan hilang saat backend restart.
+   *    Dengan <a href>, kegagalan tampil sebagai tab baru berisi JSON error
+   *    mentah. Di sini kegagalan bisa ditangkap dan ditampilkan sebagai toast.
+   * 2. Atribut `download` diabaikan browser untuk URL lintas origin, sehingga
+   *    <a href> hanya membuka tab kosong yang berkedip.
+   */
+  async function handleDownload(format) {
+    const downloadId = result?.download_id;
+    if (!downloadId || downloading) return;
+
+    setDownloading(format);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/cek-typo/download/${encodeURIComponent(downloadId)}?format=${format}`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          'Tautan unduhan sudah kedaluwarsa. Silakan periksa ulang naskah Anda untuk membuat tautan baru.'
+        );
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = `hasil_pemeriksaan.${format}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      showToast(error.message || 'Gagal mengunduh hasil. Silakan coba lagi.');
+    } finally {
+      setDownloading(null);
     }
   }
 
@@ -341,30 +385,28 @@ export default function CekTypo() {
                   {copied ? 'Tersalin!' : 'Salin Semua'}
                 </button>
 
-                {result.download_pdf ? (
-                  <a
+                {result.download_id ? (
+                  <button
                     className="cek-typo-btn cek-typo-btn-primary"
-                    href={result.download_pdf}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download
+                    type="button"
+                    onClick={() => handleDownload('pdf')}
+                    disabled={Boolean(downloading)}
                   >
                     <FiDownload aria-hidden="true" />
-                    Unduh PDF
-                  </a>
+                    {downloading === 'pdf' ? 'Menyiapkan...' : 'Unduh PDF'}
+                  </button>
                 ) : null}
 
-                {result.download_txt ? (
-                  <a
+                {result.download_id ? (
+                  <button
                     className="cek-typo-btn cek-typo-btn-secondary"
-                    href={result.download_txt}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download
+                    type="button"
+                    onClick={() => handleDownload('txt')}
+                    disabled={Boolean(downloading)}
                   >
                     <FiDownload aria-hidden="true" />
-                    Unduh TXT
-                  </a>
+                    {downloading === 'txt' ? 'Menyiapkan...' : 'Unduh TXT'}
+                  </button>
                 ) : null}
 
                 <button
@@ -391,7 +433,7 @@ export default function CekTypo() {
                 <div
                   className="cek-typo-column-body"
                   dangerouslySetInnerHTML={{
-                    __html: result.original_text_html || result.original_text || result.original_text_raw,
+                    __html: result.original_text_html || '',
                   }}
                 />
                 <div className="cek-typo-column-legend">
@@ -413,7 +455,7 @@ export default function CekTypo() {
                 <div
                   className="cek-typo-column-body"
                   dangerouslySetInnerHTML={{
-                    __html: result.result_text || result.clean_result_text,
+                    __html: result.result_text || '',
                   }}
                 />
                 <div className="cek-typo-column-legend">

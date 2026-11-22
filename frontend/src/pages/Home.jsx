@@ -105,9 +105,12 @@ function EditorPreview() {
                 </p>
               </div>
             </div>
-            <button type="button" className="home-correction-apply">
+            {/* Pratinjau editor di beranda bersifat ilustratif, bukan kontrol
+                nyata. Karena itu elemen ini sengaja <span>, bukan <button>,
+                agar tidak terlihat bisa diklik padahal tidak melakukan apa pun. */}
+            <span className="home-correction-apply" aria-hidden="true">
               Terapkan
-            </button>
+            </span>
           </div>
         </div>
         <div className="home-editor-footer">
@@ -194,7 +197,7 @@ export default function Home() {
                 </div>
                 <p className="home-pricing-note">
                   Tersedia juga paket perbulan dengan masa yang sangat lama dan biaya yang
-                  terjangkau relativ murah
+                  terjangkau relatif murah
                 </p>
                 <Link className="home-pricing-button" to="/paket">
                   Bandingkan Semua Paket

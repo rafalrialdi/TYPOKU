@@ -1,14 +1,12 @@
-const SESSION_KEYS = [
-  'token',
-  'user',
-  'id',
-  'nama',
-  'email',
-  'phone',
-  'role',
-  'identifier',
-  'remember',
-];
+// Kunci sesi yang ditulis aplikasi.
+const AUTH_KEYS = ['token', 'user'];
+
+// Kunci lama yang masih perlu dibersihkan saat logout/401 agar sisa data user
+// sebelumnya tidak tertinggal di browser yang pernah memakai versi aplikasi
+// terdahulu (yang juga menyimpan nama, telepon, role, dan identifier terpisah).
+const LEGACY_AUTH_KEYS = ['id', 'nama', 'email', 'phone', 'role', 'identifier', 'remember'];
+
+const SESSION_KEYS = [...AUTH_KEYS, ...LEGACY_AUTH_KEYS];
 
 function getStores() {
   if (typeof window === 'undefined') {
@@ -50,27 +48,35 @@ export function saveSession(payload, remember = true) {
 
   store.setItem('token', token);
   store.setItem('user', JSON.stringify(user));
-  store.setItem('id', String(user.id ?? ''));
-  store.setItem('nama', user.name || '');
-  store.setItem('email', user.email || '');
-  store.setItem('phone', user.phone || '');
-  store.setItem('role', user.role || 'user');
-  store.setItem('identifier', user.email || '');
-  store.setItem('remember', remember ? '1' : '0');
 
   dispatchAuthChanged();
 }
 
 /**
- * Membersihkan data autentikasi saja (token, profil, dan notifikasi).
- * Dipakai ketika sesi tetap valid tetapi data turunan perlu direset.
+ * Menimpa data `user` yang tersimpan tanpa menyentuh token maupun kunci lain.
+ * Dipakai saat revalidasi profil ke GET /api/auth/me ketika aplikasi dibuka.
+ *
+ * JANGAN memakai saveSession() untuk keperluan ini: saveSession() memanggil
+ * clearSession(), yang ikut menghapus prefix 'typoku_pending_order_*'. Bila
+ * dipakai saat boot, setiap refresh halaman akan membuang kode order yang sedang
+ * menunggu pembayaran sehingga tombol "Lanjutkan Pembayaran" di Checkout hilang.
  */
-export function clearAuthSession() {
-  getStores().forEach((store) => {
-    SESSION_KEYS.forEach((key) => store.removeItem(key));
-    removeKeysByPrefix(store, ['notif_']);
-  });
+export function updateStoredUser(user) {
+  if (typeof window === 'undefined' || !user) {
+    return;
+  }
 
+  // Tulis ke store yang memang menyimpan sesi aktif (localStorage bila "ingat
+  // saya" dicentang, sessionStorage bila tidak).
+  const store = window.localStorage.getItem('token')
+    ? window.localStorage
+    : window.sessionStorage;
+
+  if (!store.getItem('token')) {
+    return;
+  }
+
+  store.setItem('user', JSON.stringify(user));
   dispatchAuthChanged();
 }
 

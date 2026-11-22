@@ -383,13 +383,13 @@ async function getPaymentStatus(req, res) {
   }
 }
 
+// applyPaymentSettlement, parseMidtransTime, dan isWithinReconcileWindow adalah
+// helper internal; syncOrderWithMidtrans dipakai jobs/reconcilePayments.js,
+// RECONCILE_WINDOW_MINUTES dipakai job yang sama untuk jendela rekonsiliasi.
 module.exports = {
-  applyPaymentSettlement,
   handleMidtransNotification,
   getPaymentConfig,
-  parseMidtransTime,
   getPaymentStatus,
   syncOrderWithMidtrans,
-  isWithinReconcileWindow,
   RECONCILE_WINDOW_MINUTES,
 };

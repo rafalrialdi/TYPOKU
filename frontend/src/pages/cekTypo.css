@@ -118,12 +118,6 @@
   color: #991b1b;
 }
 
-.cek-typo-alert--warning {
-  border: 1px solid #fed7aa;
-  background-color: #ffedd5;
-  color: #9a3412;
-}
-
 .cek-typo-alert-content {
   display: flex;
   align-items: flex-start;
@@ -404,16 +398,6 @@
 .cek-typo-btn-secondary:hover:not(:disabled) {
   background-color: #f9fafb;
   color: #111827;
-}
-
-.cek-typo-btn-danger-ghost {
-  background: transparent;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-}
-
-.cek-typo-btn-danger-ghost:hover {
-  background-color: #fee2e2;
 }
 
 /* Loading State Banner */

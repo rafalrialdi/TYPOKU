@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { clearSession, getUser, saveSession } from '../services/session';
+import { clearSession, getToken, getUser, saveSession, updateStoredUser } from '../services/session';
 import { clearPersistedCache } from '../lib/queryClient';
+import { api } from '../lib/api';
 import { useLoginMutation, useRegisterMutation, useGoogleLoginMutation } from '../hooks/useAuthMutations';
 
 const AuthContext = createContext(null);
@@ -19,6 +20,37 @@ export function AuthProvider({ children }) {
     window.addEventListener('typoku:auth-changed', handleAuthChanged);
     return () => {
       window.removeEventListener('typoku:auth-changed', handleAuthChanged);
+    };
+  }, []);
+
+  // Revalidasi profil sekali saat aplikasi dibuka. Data di localStorage bisa
+  // sudah basi (nama berubah, google_id baru ditautkan, atau akun sudah dihapus
+  // di server), dan tanpa ini user melihat profil lama sampai logout manual.
+  // Data cache tetap dipakai untuk paint pertama; hasil server menimpanya lewat
+  // event 'typoku:auth-changed' yang sudah ditangani listener di atas.
+  useEffect(() => {
+    if (!getToken()) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    api('/api/auth/me', { auth: true })
+      .then((response) => {
+        const freshUser = response?.data?.user;
+        if (!cancelled && freshUser) {
+          updateStoredUser(freshUser);
+        }
+      })
+      .catch(() => {
+        // 401 sudah ditangani apiClient: sesi dibersihkan, dan redirect ke
+        // /login hanya dilakukan bila halaman saat ini memang butuh sesi.
+        // Kegagalan jaringan TIDAK boleh mengeluarkan user yang tokennya masih
+        // sah, jadi error lain sengaja diabaikan.
+      });
+
+    return () => {
+      cancelled = true;
     };
   }, []);
 

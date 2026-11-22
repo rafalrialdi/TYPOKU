@@ -11,9 +11,9 @@ const EYEBROW_BY_CODE = {
 };
 
 const ACTION_BY_CODE = {
-  CEPAT: 'Pilih Paket Standar',
+  CEPAT: 'Pilih Paket Cepat',
   PRO: 'Pilih Paket Pro',
-  PRO_PLUS: 'Pilih Paket Plus Pro',
+  PRO_PLUS: 'Pilih Paket Pro Plus',
 };
 
 const rupiahFormatter = new Intl.NumberFormat('id-ID', {
@@ -122,12 +122,6 @@ export default function Paket() {
                       <strong>{formatRupiah(pkg.price)}</strong>
                       <span className="paket-card-period">{pkg.billing_label}</span>
                     </div>
-
-                    {featured ? (
-                      <p className="paket-card-billing-note">
-                        Ditagihkan tahunan Rp 468.000/tahun (Hemat 25%)
-                      </p>
-                    ) : null}
 
                     <div
                       className={`paket-card-divider${featured ? ' paket-card-divider--primary' : ''}`}

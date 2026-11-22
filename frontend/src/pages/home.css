@@ -325,8 +325,8 @@
   font-family: inherit;
   font-size: 0.75rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+  cursor: default;
+  user-select: none;
 }
 
 .home-correction-apply:hover {

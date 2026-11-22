@@ -85,7 +85,10 @@ export default function Register() {
 
     try {
       await registerAccount(values);
-      navigate('/login', { replace: true });
+      // registerAccount() sudah menyimpan sesi (auto-login). Dulu halaman ini
+      // mengarahkan ke /login sehingga pengguna yang baru terdaftar mendarat di
+      // form masuk padahal sudah terautentikasi.
+      navigate('/', { replace: true });
     } catch (error) {
       setServerError(error.message);
     }

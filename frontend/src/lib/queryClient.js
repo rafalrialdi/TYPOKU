@@ -3,7 +3,7 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 import { queryKeys } from './queryKeys';
 
 export const FIVE_MINUTES = 1000 * 60 * 5;
-export const THIRTY_MINUTES = 1000 * 60 * 30;
+const THIRTY_MINUTES = 1000 * 60 * 30;
 
 /**
  * Pengaturan cache global yang berlaku untuk SEMUA query.

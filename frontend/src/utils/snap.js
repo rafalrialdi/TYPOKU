@@ -8,7 +8,7 @@ const SNAP_URLS = {
 let loadedSignature = null;
 let loadPromise = null;
 
-export function getSnapScriptUrl(clientKey, isProduction) {
+function getSnapScriptUrl(clientKey, isProduction) {
   if (typeof isProduction === 'boolean') {
     return isProduction ? SNAP_URLS.production : SNAP_URLS.sandbox;
   }

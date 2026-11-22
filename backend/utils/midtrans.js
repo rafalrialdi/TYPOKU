@@ -52,11 +52,13 @@ function verifyNotificationSignature(orderId, statusCode, grossAmount, signature
   return calculated.toLowerCase() === signatureKey.toLowerCase();
 }
 
+// serverKey sengaja TIDAK diekspor: nilainya hanya dipakai internal untuk
+// menghitung signature notifikasi Midtrans, dan tidak boleh tersedia bagi modul
+// lain agar tidak ada peluang ikut terkirim ke response.
 module.exports = {
   snap,
   coreApi,
   isProduction,
-  serverKey,
   clientKey,
   mapPaymentMethodToEnabledPayments,
   verifyNotificationSignature,
